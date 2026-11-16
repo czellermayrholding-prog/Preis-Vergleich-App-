@@ -841,7 +841,7 @@ async function shrinkImage(file, maxSide = 2200) {
 /* Text-Erkennung ohne KI: Positionszeilen mit Preis finden */
 const UNITS = 'kg|kilo|kiste|kisten|kst|ki|krt|karton|kartons|stk|st|stck|stück|stueck|bund|bd|bde|schale|schalen|sch|netz|pck|pack|packung|steige|stg|kolli|ko|sack|eimer|tray|beutel|btl|fl|glas|ds|dose';
 const SKIP = /(zwischen)?summe|gesamtbetrag|endbetrag|rechnungsbetrag|mwst|ust\b|umsatzsteuer|steuer|netto ?betrag|bruttobetrag|zahlbar|skonto|iban|bic|bankverbindung|übertrag|uebertrag|seite \d|telefon|tel\.|fax|e-?mail|www\.|ust-?id|steuernr|handelsregister|lieferschein ?nr/i;
-const NOPRICE = /pfand|leergut|fracht|versand|maut|gebühr|gebuehr|transport/i;
+const NOPRICE = /pfand|leergut|fracht|versand|maut|gebühr|gebuehr|transport|europool|pool-?steige|entsorgung|debitor|rabatt/i;
 function amt(s) { s = s.replace(/\s/g, ''); if (/,\d{2,3}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); return Math.round(parseFloat(s) * 100); }
 function parseInvoiceLines(lines) {
   const items = [];
@@ -899,22 +899,28 @@ function bestMatch(desc, invUnit) {
   return best && best.score >= 0.42 ? best : null;
 }
 const CASE = /^(kiste|kisten|kst|ki|kolli|ko|colli|krt|karton|steige|stg|sack|pack|packung|tray|gebinde|ve)$/;
-function packFor(it, p) {
-  const pu = norm(it.unit), au = norm(p.unit), pk = norm(it.packUnit);
-  if (CASE.test(pu)) {
-    if (it.pack > 0 && (pk === 'kg' ? au === 'kg' : au !== 'kg')) return it.pack;
-    return guessPack(it.desc, it.unit, p.unit);
-  }
-  if (pu === 'kg' && au === 'kg') return 1;
-  if (pu && pu !== 'kg' && au !== 'kg') return 1;
-  return guessPack(it.desc, it.unit, p.unit);
+function descKg(d, perCase) {
+  let m = d.match(/(\d+)\s*x\s*(\d+)\s*(g|gr)\b/i);
+  if (m) return (perCase ? +m[1] : 1) * +m[2] / 1000;
+  m = d.match(/(\d+(?:[.,]\d+)?)\s*kg\b/i); if (m) return parseFloat(m[1].replace(',', '.'));
+  m = d.match(/(\d+)\s*(g|gr|gramm)\b/i); if (m) return +m[1] / 1000;
+  return null;
 }
-function guessPack(desc, invUnit, artUnit) {
-  const d = String(desc), au = norm(artUnit), iu = norm(invUnit);
-  if (au === 'kg' && iu === 'kg') return 1;
-  if (au === 'kg') { const k = d.match(/(\d+(?:[.,]\d+)?)\s*kg/i); if (k) return parseFloat(k[1].replace(',', '.')); }
-  if (au !== 'kg') { const n = d.match(/(\d+)\s*(?:er\b|x\b|stk|st\.|stück|stueck)/i); if (n && +n[1] > 1) return +n[1]; }
-  return 1;
+function descPieces(d) {
+  const m = d.match(/(\d+)\s*(?:er\b|x\b|stk\b|stck\b|st\.|stück|stueck)/i);
+  return m && +m[1] > 1 ? +m[1] : null;
+}
+// Inhalt = wie viele Verkaufseinheiten (kg oder Stück) eine Preiseinheit der Rechnung enthält
+function packFor(it, p) {
+  const pu = norm(it.unit), isCase = CASE.test(pu);
+  if (norm(p.unit) === 'kg') {
+    if (pu === 'kg') return { pack: 1, known: true };
+    const k = it.kg || descKg(it.desc, isCase);
+    return k ? { pack: k, known: true } : { pack: 1, known: false };
+  }
+  if (it.pcs) return { pack: it.pcs, known: true };
+  if (isCase) { const n = descPieces(it.desc); return n ? { pack: n, known: true } : { pack: 1, known: false }; }
+  return { pack: 1, known: pu !== 'kg' };
 }
 
 /* KI (nur in der claude.ai-Version) */
@@ -934,23 +940,27 @@ function updateInvoiceMode() {
   $('#photoBtn').hidden = !aiImages;
   $('#photoNote').hidden = !!aiImages;
 }
-const AI_PROMPT = `Du liest eine Lieferanten-Rechnung aus dem Obst- und Gemüse-Großhandel (Großmarkt München) für einen Marktstand. Oft ist es ein schräges Handyfoto oder ein Screenshot; ignoriere alles außerhalb der Rechnung.
+const AI_PROMPT = `Du liest Lieferanten-Rechnungen aus dem Obst- und Gemüse-Großhandel (Großmarkt München) für einen Marktstand. Meist ist es ein schräges Handyfoto oder ein Screenshot aus WhatsApp; ignoriere alles außerhalb der Rechnung.
 Antworte NUR mit JSON in genau dieser Form:
-{"supplier":"Name des Lieferanten","date":"TT.MM.JJJJ","prices_gross":false,"items":[{"description":"Bezeichnung wie auf der Rechnung","quantity":27,"price_unit":"kg","unit_price":3.00,"line_total":81.00,"pack_size":null,"pack_unit":null}]}
+{"supplier":"Name des Lieferanten","date":"TT.MM.JJJJ","prices_gross":false,"items":[{"description":"Bezeichnung wie auf der Rechnung","quantity":27,"price_unit":"kg","unit_price":3.00,"line_total":81.00,"unit_kg":1,"unit_pieces":null}]}
 Felder je Position:
-- unit_price: genau der Einzelpreis aus der Spalte Einzelpreis / Preis/Einheit / Preis, als Zahl mit Punkt. Nie den Zeilenbetrag.
-- price_unit: worauf sich unit_price bezieht: "kg", "Stück", "Bund", "Schale" oder "Kiste" (Kiste auch für Kolli, Karton, Steige, Colli, Sack).
-- quantity: die Menge, mit der unit_price multipliziert den Zeilenbetrag ergibt.
-- line_total: der Zeilenbetrag (Warenwert / Gesamt / Betrag).
-- pack_size und pack_unit: NUR wenn price_unit "Kiste" ist und der Inhalt der Kiste erkennbar ist, z. B. "Passionsfrucht 3kg" -> 3 und "kg", "Erdbeeren 8x500g" je Kiste -> 8 und "Schale", Kiste mit 40 Stück -> 40 und "Stück". Sonst null.
-Typische Formate:
-- Spalten "Colli/Sack | Gewicht/Menge | Preis/Einheit | Warenwert": der Preis gilt je Einheit aus Gewicht/Menge. "3 Colli, 27 kg, 3,00, 81,00" -> quantity 27, price_unit "kg". "1 Colli, 1 Kolli, 38,00" -> quantity 1, price_unit "Kiste".
-- Spalten "Anzahl | Inhalt/Stück Bund/kg | Ges.-Menge | Einzelpreis | Gesamt": der Einzelpreis gilt je Stück/Bund/kg/Schale. "6 | 15,00 | 90,00 | 0,44 | 39,60" bei Radieserl -> quantity 90, price_unit "Bund", unit_price 0.44. "54 | 8,00 | 432,00 | 2,95" bei "Erdbeeren 8x500g" -> quantity 432, price_unit "Schale". "11 | 12,00 | 132,00 | 0,58" bei Kohlrabi -> quantity 132, price_unit "Stück". Steht bei Inhalt 1,00, gilt der Einzelpreis je Kiste: "3 | 1,00 | 3,00 | 11,95" bei Blumenkohl -> quantity 3, price_unit "Kiste", pack_size null.
-- Spalten "Menge | Warenbezeichnung | Stk./kg | Preis | Betrag": der Preis gilt je Kiste. "40 Clementinen 28,00 1.120,00" -> quantity 40, price_unit "Kiste". "5 Passionsfrucht 3kg 38,00 190,00" -> price_unit "Kiste", pack_size 3, pack_unit "kg".
+- unit_price: der Einzelpreis der Zeile (Spalte Einzelpreis, Preis/Einheit, Preis oder VK-Preis; "VK-Preis" ist der Verkaufspreis des Lieferanten, also unser Einkaufspreis), als Zahl mit Punkt. Nie der Zeilenbetrag.
+- quantity: die Menge, die mit unit_price multipliziert den Zeilenbetrag ergibt. Gibt es mehrere Mengenspalten, nimm die, bei der quantity × unit_price = line_total stimmt.
+- price_unit: worauf sich unit_price bezieht: "kg", "Stück", "Bund", "Schale" oder "Kiste" (Kiste auch für Kolli, Colli, Karton, Steige, Sack).
+- line_total: der Zeilenbetrag (Warenwert, Gesamt, Gesamtpreis, Betrag).
+- unit_kg: wie viel kg eine Preiseinheit wiegt, wenn erkennbar: kg -> 1; "Pastinaken 5KG" je Kiste -> 5; "Mango Keitt 4 kg - 9er" je Steige -> 4; "Waldheidelbeeren a 500 gr" je Stück -> 0.5; "Himbeeren 8 x 200 g" je Stück -> 0.2. Sonst null.
+- unit_pieces: wie viele Stück, Schalen oder Bund eine Preiseinheit enthält, wenn erkennbar: Stück/Schale/Bund -> 1; "Romanesco 8 Stck" je Kiste -> 8; "Artischocken 12er" je Steige -> 12; "Mango Keitt 4 kg - 9er" je Steige -> 9; "Erdbeeren 8x500g" je Kiste -> 8. Sonst null.
+Formate der Lieferanten:
+- Früchtewelt ("Colli/Sack | Gewicht/Menge | Preis/Einheit | Warenwert"): Preis je Einheit aus Gewicht/Menge. "3 | 27 kg | 3,00 | 81,00" -> quantity 27, "kg". "1 | 1 Kolli | 38,00" -> quantity 1, "Kiste".
+- Göpel ("Anzahl | Inhalt/Stück Bund/kg | Ges.-Menge | Einzelpreis | Gesamt"): Preis je Stück/Bund/kg/Schale der Ges.-Menge. "6 | 15,00 | 90,00 | 0,44 | 39,60" Radieserl -> quantity 90, "Bund". "11 | 12,00 | 132,00 | 0,58" Kohlrabi -> 132, "Stück". "54 | 8,00 | 432,00 | 2,95" Erdbeeren 8x500g -> 432, "Schale", unit_kg 0.5. Bei Inhalt 1,00 gilt der Preis je Kiste: "3 | 1,00 | 3,00 | 11,95" Blumenkohl -> 3, "Kiste".
+- Brozulat ("Menge | Warenbezeichnung | Stk./kg | Preis | Betrag"): Preis je Kiste. "5 Passionsfrucht 3kg 38,00 190,00" -> 5, "Kiste", unit_kg 3.
+- Pilzversand Zollner ("Anzahl | Einheit | Artikelnr. | Bezeichnung | Einzelpreis | Gesamtpreis"): Preis je Einheit. "24 kg Pfifferlinge 12,00 € 288,00 €" -> 24, "kg". "12 Stk. Waldheidelbeeren a 500 gr 5,00 €" -> 12, "Schale", unit_kg 0.5, unit_pieces 1.
+- Fritz Möss ("Menge (Basis) | Menge | Einheit | VK-Preis | MwSt % | Betrag"): Preis je Einheit der zweiten Menge. "26 | 208 | Stück | 3,30 | 686,40" Himbeeren 8 x 200 g -> 208, "Schale", unit_kg 0.2. "1 | 7,5 | kg | 5,75 | 43,13" -> 7.5, "kg". "2 | 2 | Steige | 35,00" Artischocken 12er -> 2, "Kiste", unit_pieces 12.
+- Franz Schmitt ("Menge/Colli | Warenbezeichnung | Stück/Gewicht | Preis | Betrag"): quantity ist Stück/Gewicht. "1 | Wachsbohnen gelb 4KG | 4,00 | 5,30 | 21,20" -> 4, "kg". "1 | Pastinaken 5KG | 1,00 | 17,00" -> 1, "Kiste", unit_kg 5. "1 | Romanesco 8 Stck | 1,00 | 15,50" -> 1, "Kiste", unit_pieces 8. "3 | Bimi Bandeja 8x 200G | 24,00 | 2,60" -> 24, "Schale", unit_kg 0.2.
 Weiter:
-- prices_gross ist nur dann true, wenn die Einzelpreise die Mehrwertsteuer enthalten. Bei Großmarkt-Rechnungen sind sie fast immer netto.
-- Lass Summen, Überträge, Steuer-, Pfand-, Leergut- (z. B. EUROPOOL), Fracht- und Rabattzeilen (z. B. Entsorgungsrabatt) weg.
-- Mehrere Bilder sind Seiten derselben Rechnung oder mehrere Rechnungen desselben Lieferanten: alle Positionen aufführen.
+- prices_gross ist nur dann true, wenn die Einzelpreise die Mehrwertsteuer enthalten. Bei diesen Großmarkt-Rechnungen sind sie netto.
+- Lass Summen, Überträge, Steuer-, Pfand- und Leergutzeilen (EUROPOOL, Pool-Steigen), Fracht und Rabatte (Entsorgungsrabatt, Entsorgung Debitor) weg. Zeilen wie "Lieferschein ...", "Es bediente Sie" sind keine Positionen.
+- Mehrere Bilder sind Seiten derselben Rechnung oder mehrere Rechnungen: alle Positionen aufführen.
 - Erfinde nichts. Unlesbare Zahlen sind null.`;
 async function aiExtract(text, images) {
   const input = text ? AI_PROMPT + '\n\nText der Rechnung:\n' + text.slice(0, 80000) : AI_PROMPT + '\n\nDie Rechnung ist als Bild angehängt' + (images.length > 1 ? ` (${images.length} Bilder).` : '.');
@@ -959,7 +969,7 @@ async function aiExtract(text, images) {
   const items = r.items.filter(it => it && it.description && it.unit_price != null).map(it => ({
     desc: String(it.description), qty: it.quantity ?? null, unit: it.price_unit || it.unit || '', price: Math.round(Number(String(it.unit_price).replace(',', '.')) * 100),
     total: it.line_total != null ? Math.round(Number(String(it.line_total).replace(',', '.')) * 100) : null,
-    pack: it.pack_size ? Number(it.pack_size) : null, packUnit: it.pack_unit || '', extra: NOPRICE.test(it.description)
+    kg: Number(it.unit_kg) > 0 ? Number(it.unit_kg) : null, pcs: Number(it.unit_pieces) > 0 ? Number(it.unit_pieces) : null, extra: NOPRICE.test(it.description)
   })).filter(it => it.price > 0);
   return { items, supplier: r.supplier || '', date: r.date || '', gross: !!r.prices_gross };
 }
@@ -1017,9 +1027,9 @@ function openInvoice(fileName, res) {
   const knownSup = Object.values(S.maps).find(m => m.supplier && norm(res.supplier).includes(norm(m.supplier)));
   inv = { file: fileName, rows: res.items.map(it => {
     const m = bestMatch(it.desc, it.unit), p = m && S.products[m.id];
-    const pack = m && m.remembered ? m.pack : p ? packFor(it, p) : 1;
+    const pk = m && m.remembered ? { pack: m.pack, known: true } : p ? packFor(it, p) : { pack: 1, known: true };
     const off = it.total && it.qty && it.price ? Math.abs(it.qty * it.price - it.total) > Math.max(3, it.total * 0.02) : false;
-    return { desc: it.desc, qty: it.qty, unit: it.unit, price: it.price, total: it.total || null, off, packUnit: it.packUnit, pack, id: p ? p.id : '', use: !!p && !it.extra, remembered: !!(m && m.remembered) };
+    return { desc: it.desc, qty: it.qty, unit: it.unit, price: it.price, total: it.total || null, off, kg: it.kg, pcs: it.pcs, pack: pk.pack, known: pk.known, id: p ? p.id : '', use: !!p && !it.extra, remembered: !!(m && m.remembered) };
   }) };
   $('#invMeta').textContent = `${fileName} · ${inv.rows.length} Positionen erkannt · ${inv.rows.filter(r => r.id).length} davon einem Artikel zugeordnet`;
   $('#invSupplier').value = knownSup ? knownSup.supplier : res.supplier || '';
@@ -1032,7 +1042,7 @@ function openInvoice(fileName, res) {
       <label class="chk"><input type="checkbox" class="iu" ${r.use ? 'checked' : ''} aria-label="Übernehmen"></label>
       <div class="idesc"><b>${esc(r.desc)}</b><div class="secondary">${r.qty != null ? esc(String(r.qty).replace('.', ',')) + ' ' : ''}${esc(r.unit || '')}${r.price ? ' × ' + eur(r.price) + (r.unit ? ' je ' + esc(r.unit) : '') : ''}${r.total ? ' = ' + eur(r.total) : ''}${r.remembered ? ' · Zuordnung gemerkt' : ''}</div>${r.off ? '<div class="none" style="font-size:12px">Menge × Preis passt nicht zum Zeilenbetrag. Bitte mit der Rechnung vergleichen.</div>' : ''}</div>
       <label class="f fp">Preis €<input class="ip" inputmode="decimal" value="${nf.format(r.price / 100)}"></label>
-      <label class="f fk">÷ Inhalt<input class="ik" inputmode="decimal" value="${String(r.pack).replace('.', ',')}"></label>
+      <label class="f fk">÷ Inhalt<input class="ik" inputmode="decimal" value="${String(Math.round(r.pack * 1000) / 1000).replace('.', ',')}"></label>
       <label class="f art">Foodware-Artikel<input class="ia" list="artList" autocomplete="off" placeholder="Artikel suchen …" value="${r.id ? esc(r.id + ' · ' + fullName(S.products[r.id])) : ''}"></label>
       <div class="ires"></div>
     </div>`).join('');
@@ -1055,7 +1065,7 @@ function updateInvRow(i) {
   else {
     const c = rowCost(r), m = c != null ? marginOf(p.want, c, p.vat) : null;
     out.innerHTML = c == null ? '<span class="none">Preis oder Inhalt fehlt</span>'
-      : `<span class="money">${eur(c)} / ${esc(p.unit.trim())}</span> <span class="badge ${colorOf(m)}">${m != null ? nf1.format(m) + ' %' : '–'}</span><div class="secondary">VK ${eur(p.want)} · EK bisher ${p.cost != null ? eur(p.cost) : '–'}</div>${CASE.test(norm(r.unit)) && String(r.pack) === '1' ? `<div class="none">Preis gilt je Kiste: bei Inhalt eintragen, wie viel ${norm(p.unit) === 'kg' ? 'kg' : 'Stück'} drin sind.</div>` : c >= p.want ? '<div class="none">Bitte prüfen: Einkauf teurer als Verkauf. Stimmen Artikel und Inhalt?</div>' : ''}`;
+      : `<span class="money">${eur(c)} / ${esc(p.unit.trim())}</span> <span class="badge ${colorOf(m)}">${m != null ? nf1.format(m) + ' %' : '–'}</span><div class="secondary">VK ${eur(p.want)} · EK bisher ${p.cost != null ? eur(p.cost) : '–'}</div>${!r.known && String(r.pack) === '1' ? `<div class="none">Preis gilt je ${esc(r.unit || 'Einheit')}: bei Inhalt eintragen, wie viel ${norm(p.unit) === 'kg' ? 'kg' : 'Stück'} das sind.</div>` : c >= p.want ? '<div class="none">Bitte prüfen: Einkauf teurer als Verkauf. Stimmen Artikel und Inhalt?</div>' : ''}`;
   }
   const n = inv.rows.filter(x => x.use && S.products[x.id] && rowCost(x) != null).length;
   $('#invCount').textContent = `${n} von ${inv.rows.length} Positionen werden übernommen`;
@@ -1065,13 +1075,13 @@ $('#invRows').addEventListener('input', e => {
   const el = e.target.closest('.invrow'); if (!el) return;
   const i = +el.dataset.i, r = inv.rows[i];
   if (e.target.matches('.ip')) { const v = parseCents(e.target.value); r.price = v && !isNaN(v) ? v : null; }
-  if (e.target.matches('.ik')) r.pack = e.target.value;
+  if (e.target.matches('.ik')) { r.pack = e.target.value; r.known = true; }
   if (e.target.matches('.iu')) r.use = e.target.checked;
   if (e.target.matches('.ia')) {
     const v = e.target.value.trim(), id = v.split(' · ')[0].trim();
     const before = r.id;
     r.id = S.products[id] ? id : (Object.values(S.products).find(p => norm(fullName(p)) === norm(v)) || {}).id || '';
-    if (r.id && r.id !== before) { r.use = true; el.querySelector('.iu').checked = true; const p = S.products[r.id]; if (String(r.pack) === '1') { r.pack = guessPack(r.desc, r.unit, p.unit); el.querySelector('.ik').value = String(r.pack).replace('.', ','); } }
+    if (r.id && r.id !== before) { r.use = true; el.querySelector('.iu').checked = true; const p = S.products[r.id]; const pk = packFor(r, p); r.pack = pk.pack; r.known = pk.known; el.querySelector('.ik').value = String(Math.round(r.pack * 1000) / 1000).replace('.', ','); }
   }
   updateInvRow(i);
 });
