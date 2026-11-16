@@ -9,6 +9,7 @@ Läuft komplett im Browser: kein Server und keine Installation. Die Daten bleibe
 - **Einkaufspreis netto und Lieferant erfassen**: Die Marge wird sofort berechnet: (Netto-VK − Netto-EK) ÷ Netto-VK.
   Farben: ab 50 % hellgrün, ab 40 % dunkelgrün, ab 30 % orange, darunter rot.
 - **Preisvorschläge**: Verkaufspreis für 30 / 40 / 50 % Marge mit einem Tipp übernehmen.
+- **Rechnungen hochladen**: PDF-Rechnungen werden auf dem Gerät gelesen, Positionen deinen Artikeln zugeordnet und nach deiner Prüfung als Einkaufspreise übernommen, mit Umrechnung je Kiste ÷ Inhalt. Zuordnungen merkt sich die App. Fotos und eingescannte PDFs liest nur die KI in der claude.ai-Version.
 - **Suche, Filter** (Margenfarbe, offene Änderungen, Einheit) und Sortierung per Klick auf den Spaltenkopf.
 - **Test-CSV-Export** im exakten Foodware-Format: alle Artikel oder nur die Änderungen. Texte bleiben byte-genau wie im Original, nur die Preise ändern sich.
 - **Verlauf** aller Preisänderungen und Importe.
@@ -27,5 +28,5 @@ Läuft komplett im Browser: kein Server und keine Installation. Die Daten bleibe
 
 ## Grenzen (bewusst)
 - Kein Abgleich zwischen Geräten: PC und iPhone haben jeweils eigene Daten. Zum Übertragen das Backup nutzen.
-- Keine automatische Rückschreibung in Foodware. KI-Einkauf (E-Mail-Preislisten) und Lieferantenvergleich sind als „kommt bald“ markiert.
+- Keine automatische Rückschreibung in Foodware. Der Lieferantenvergleich ist als „kommt bald“ markiert. Der PDF-Leser wird beim ersten Mal aus dem Internet geladen (cdnjs), danach geht er auch offline.
 - Browserdaten können verloren gehen, wenn sie gelöscht werden. Darum regelmäßig ein Backup speichern.

@@ -162,6 +162,40 @@ dialog::backdrop{background:var(--scrim)}
 
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--lime);color:var(--on-lime);padding:12px 18px;border-radius:var(--r-md);font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:50;max-width:calc(100% - 32px);box-shadow:0 10px 30px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* Rechnung prüfen */
+dialog.wide{width:min(1120px,calc(100% - 24px))}
+.invhead{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,2fr);gap:12px;align-items:end}
+.check{display:flex;gap:10px;align-items:center;font-size:13px;font-weight:600;color:var(--muted);padding:12px 0}
+.check input{width:20px;height:20px;accent-color:var(--lime);flex:none}
+.invrows{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-top:6px}
+.invrow{display:grid;grid-template-columns:28px minmax(0,2.2fr) 96px 84px minmax(0,2.2fr) minmax(0,1.5fr);gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}
+.invrow:first-child{border-top:0}
+.invrow.off{opacity:.45}
+.invrow .chk input{width:20px;height:20px;accent-color:var(--lime)}
+.invrow .f{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.invrow .f input{display:block;width:100%;margin-top:4px;padding:9px 10px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--sunken);color:var(--ink);font-size:15px;font-weight:600;letter-spacing:0;text-transform:none}
+.invrow .f input:focus{border-color:var(--lime);outline:none}
+.invrow .idesc{min-width:0;overflow-wrap:anywhere}
+.invrow .ires{min-width:0;font-size:13px}
+.invrow .ires .none{color:var(--warn);font-weight:600}
+.dropzone{border:1.5px dashed var(--line-strong);border-radius:var(--r-lg);padding:26px;text-align:center;color:var(--muted);margin:0 24px 20px;transition:border-color .15s,background .15s}
+.dropzone.over{border-color:var(--lime);background:var(--lime-soft)}
+.dropzone .actions{justify-content:center;margin-top:14px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(max-width:700px){
+  .invhead{grid-template-columns:1fr 1fr}
+  .invhead .sup,.invhead .check{grid-column:1/-1}
+  .invhead .check{padding:0 0 4px}
+  .invrow{grid-template-columns:24px 1fr 1fr;grid-template-areas:"chk desc desc" ". price pack" ". art art" ". res res";row-gap:10px}
+  .invrow .chk{grid-area:chk;align-self:start}
+  .invrow .idesc{grid-area:desc}
+  .invrow .fp{grid-area:price}
+  .invrow .fk{grid-area:pack}
+  .invrow .art{grid-area:art}
+  .invrow .ires{grid-area:res}
+  .dropzone{margin:0 14px 14px;padding:20px 14px}
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
 /* Tablet */
@@ -217,9 +251,9 @@ dialog::backdrop{background:var(--scrim)}
 <aside>
   <div class="logo"><span class="wordmark"><em>mein</em>wochenmarkt</span><span class="mini" aria-hidden="true">m.</span><small>Smart Pricing</small></div>
   <button class="nav active" data-view="artikel"><span class="ico">▦</span><span>Artikel</span></button>
+  <button class="nav" data-view="rechnungen"><span class="ico">✎</span><span>Rechnungen</span></button>
   <button class="nav" data-view="aenderungen"><span class="ico">⇄</span><span>Änderungen</span><b class="count" id="navCount" hidden></b></button>
   <button class="nav" data-view="daten"><span class="ico">⇅</span><span>Daten</span></button>
-  <button class="nav soon" data-soon="Der KI-Preislistenagent folgt in der nächsten Ausbaustufe. Es ist noch keine E-Mail-Verbindung eingerichtet."><span class="ico">✧</span><span>KI-Einkauf</span></button>
   <button class="nav soon" data-soon="Der Lieferantenvergleich folgt nach der E-Mail-Anbindung."><span class="ico">♧</span><span>Lieferanten</span></button>
   <div class="sidebottom"><strong>Mein Wochenmarkt</strong><small id="sideInfo">Foodware CSV · Testbetrieb</small></div>
 </aside>
@@ -278,6 +312,27 @@ dialog::backdrop{background:var(--scrim)}
         <button class="btn more" id="more" hidden>Weitere Artikel anzeigen</button>
       </div>
       <div class="footer">Marge = (Netto-VK − Netto-EK) ÷ Netto-VK · 100. Einkaufspreise netto je Verkaufseinheit eingeben (bei kg-Artikeln also pro kg). Preisänderungen gelten erst, wenn ein neuer Foodware-Export sie bestätigt.</div>
+    </section>
+  </section>
+
+  <!-- RECHNUNGEN -->
+  <section id="view-rechnungen" hidden>
+    <div class="top"><div><div class="eyebrow">Einkauf / Rechnungen</div><h1>Einkaufspreise aus <em>Rechnungen.</em></h1><p class="sub">Rechnung hochladen, Positionen prüfen, Einkaufspreise mit einem Tipp übernehmen.</p></div></div>
+    <section class="panel">
+      <div class="panelhead"><div><h2>Rechnung hochladen</h2><p id="invModeText">PDF-Rechnungen werden direkt auf diesem Gerät gelesen.</p></div></div>
+      <div class="dropzone" id="dropzone">
+        <div id="dropText"><b style="color:var(--ink)">Rechnung hier ablegen</b> oder auswählen</div>
+        <div class="actions">
+          <label class="btn primary filebtn">↑ PDF-Rechnung wählen<input type="file" accept="application/pdf,.pdf" data-invoice></label>
+          <label class="btn filebtn" id="photoBtn" hidden>↑ Foto der Rechnung<input type="file" accept="image/*" data-invoice></label>
+        </div>
+        <div class="secondary" id="photoNote" style="margin-top:12px">Fotos von Papierrechnungen kann nur die KI lesen. Die gibt es in der Version unter deinem claude.ai-Link.</div>
+      </div>
+      <div class="notice" id="invBusy" hidden style="margin:0 24px 20px"></div>
+    </section>
+    <section class="panel">
+      <div class="panelhead"><div><h2>Übernommene Rechnungen</h2><p>Neueste zuerst</p></div></div>
+      <ul class="list" id="invList"></ul>
     </section>
   </section>
 
@@ -352,6 +407,28 @@ dialog::backdrop{background:var(--scrim)}
   </form>
 </dialog>
 
+<!-- Rechnung prüfen -->
+<dialog id="invDialog" class="wide">
+  <form class="dialog" id="invForm" method="dialog" novalidate>
+    <h2>Rechnung prüfen</h2>
+    <p class="meta" id="invMeta"></p>
+    <div class="invhead">
+      <label class="field sup">Lieferant<input id="invSupplier" maxlength="120" autocomplete="off" placeholder="z. B. Großhändler A"></label>
+      <label class="field">Rechnungsdatum<input id="invDate" maxlength="20" autocomplete="off" placeholder="TT.MM.JJJJ"></label>
+      <label class="check"><input type="checkbox" id="invGross"> Preise auf der Rechnung sind brutto (inkl. MwSt.)</label>
+    </div>
+    <div class="notice" style="margin:6px 0 12px">Einkaufspreis je Verkaufseinheit = <b>Preis</b> ÷ <b>Inhalt</b>. Beispiel: Kiste Mango 18,00 € mit 12 Stück ergibt 1,50 € je Stck. Bei kg-Artikeln ist der Inhalt das Kistengewicht in kg.</div>
+    <div class="invrows" id="invRows"></div>
+    <datalist id="artList"></datalist>
+    <div class="err" id="invErr" hidden></div>
+    <div class="dialogbuttons">
+      <span class="secondary left" id="invCount" style="align-self:center"></span>
+      <button type="button" class="btn" id="invCancel">Abbrechen</button>
+      <button type="submit" class="btn primary" id="invApply">Übernehmen</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- Meldung -->
 <dialog id="msgDialog">
   <form class="dialog" method="dialog">
@@ -367,9 +444,10 @@ dialog::backdrop{background:var(--scrim)}
 'use strict';
 /* ============ Speicher ============ */
 const KEY = 'mwm-smart-pricing-v1';
-let S = { products: {}, audit: [], lastImport: null };
+const fresh = () => ({ products: {}, audit: [], lastImport: null, maps: {}, invoices: [] });
+let S = fresh();
 function load() {
-  try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign({ products: {}, audit: [], lastImport: null }, JSON.parse(raw)); }
+  try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(fresh(), JSON.parse(raw)); }
   catch (e) { console.warn(e); }
 }
 function save() {
@@ -555,7 +633,7 @@ function render() {
   us.innerHTML = '<option value="">Alle Einheiten</option>' + units.map(u => `<option ${u === cur ? 'selected' : ''}>${esc(u)}</option>`).join('');
   us.hidden = units.length < 2;
 
-  renderTable(all); renderChanges(pending); renderData();
+  renderTable(all); renderChanges(pending); renderData(); renderInvoices();
 }
 
 function renderTable(all) {
@@ -614,7 +692,8 @@ function renderChanges(pending) {
 function auditText(a) {
   if (a.k === 'import') return `Foodware-Export importiert: ${esc(a.file)} (${a.count} Artikel${a.neu ? ', ' + a.neu + ' neu' : ''}${a.ok ? ', ' + a.ok + ' Änderungen bestätigt' : ''})`;
   if (a.k === 'vk') return `VK ${eur(a.o)} → <b>${eur(a.n)}</b>`;
-  if (a.k === 'ek') return `EK netto ${a.o == null ? '–' : eur(a.o)} → <b>${a.n == null ? '–' : eur(a.n)}</b>${a.s ? ' · ' + esc(a.s) : ''}`;
+  if (a.k === 'ek') return `EK netto ${a.o == null ? '–' : eur(a.o)} → <b>${a.n == null ? '–' : eur(a.n)}</b>${a.s ? ' · ' + esc(a.s) : ''}${a.src ? ' · aus Rechnung' : ''}`;
+  if (a.k === 'invoice') return `Rechnung übernommen: ${esc(a.supplier || a.file)} (${a.count} Einkaufspreise)`;
   if (a.k === 'revert') return `Änderung verworfen, zurück auf ${eur(a.n)}`;
   if (a.k === 'ok') return `✓ In Foodware bestätigt: ${eur(a.n)}`;
   return '';
@@ -708,6 +787,301 @@ function msg(title, html, confirm) {
 let toastTimer;
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2400); }
 
+/* ============ Rechnungen ============ */
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let pdfjsP = null;
+function loadPdfJs() {
+  if (!pdfjsP) pdfjsP = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = PDFJS + 'pdf.min.js';
+    sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; res(window.pdfjsLib); };
+    sc.onerror = () => { pdfjsP = null; rej(new Error('Der PDF-Leser konnte nicht geladen werden. Beim ersten Mal braucht die App dafür Internet.')); };
+    document.head.appendChild(sc);
+  });
+  return pdfjsP;
+}
+async function pdfLines(pdf) {
+  const lines = [];
+  for (let n = 1; n <= Math.min(pdf.numPages, 15); n++) {
+    const page = await pdf.getPage(n), tc = await page.getTextContent();
+    const items = tc.items.filter(it => it.str && it.str.trim()).map(it => ({ s: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: Math.abs(it.transform[3]) || 8 }));
+    items.sort((a, b) => b.y - a.y || a.x - b.x);
+    let cur = [], y = null;
+    const flush = () => {
+      if (!cur.length) return;
+      cur.sort((a, b) => a.x - b.x);
+      let t = '', end = null;
+      for (const it of cur) { if (end != null) t += it.x - end > it.h * 0.25 ? ' ' : ''; t += it.s; end = it.x + it.w; }
+      lines.push(t.replace(/\s+/g, ' ').trim()); cur = [];
+    };
+    for (const it of items) { if (y != null && Math.abs(it.y - y) > Math.max(2, it.h * 0.45)) flush(); if (!cur.length) y = it.y; cur.push(it); }
+    flush();
+  }
+  return lines.filter(Boolean);
+}
+async function pdfImages(pdf, max = 4) {
+  const out = [];
+  for (let n = 1; n <= Math.min(pdf.numPages, max); n++) {
+    const page = await pdf.getPage(n), vp = page.getViewport({ scale: 2 });
+    const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    out.push(await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85)));
+  }
+  return out;
+}
+async function shrinkImage(file, maxSide = 2200) {
+  const bmp = await createImageBitmap(file).catch(() => null);
+  if (!bmp) return file;
+  const k = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+}
+
+/* Text-Erkennung ohne KI: Positionszeilen mit Preis finden */
+const UNITS = 'kg|kilo|kiste|kisten|kst|ki|krt|karton|kartons|stk|st|stck|stück|stueck|bund|bd|bde|schale|schalen|sch|netz|pck|pack|packung|steige|stg|kolli|ko|sack|eimer|tray|beutel|btl|fl|glas|ds|dose';
+const SKIP = /(zwischen)?summe|gesamtbetrag|endbetrag|rechnungsbetrag|mwst|ust\b|umsatzsteuer|steuer|netto ?betrag|bruttobetrag|zahlbar|skonto|iban|bic|bankverbindung|übertrag|uebertrag|seite \d|telefon|tel\.|fax|e-?mail|www\.|ust-?id|steuernr|handelsregister|lieferschein ?nr/i;
+const NOPRICE = /pfand|leergut|fracht|versand|maut|gebühr|gebuehr|transport/i;
+function amt(s) { s = s.replace(/\s/g, ''); if (/,\d{2,3}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); return Math.round(parseFloat(s) * 100); }
+function parseInvoiceLines(lines) {
+  const items = [];
+  const AMT = /-?\d{1,3}(?:\.\d{3})*,\d{2,3}(?!\d)|-?\d+\.\d{2}(?!\d)/g;
+  for (const line of lines) {
+    if (SKIP.test(line) || /rechnung\s*(nr|nummer)|datum|kunden-?nr/i.test(line)) continue;
+    const m = [...line.replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, d => ' '.repeat(d.length)).matchAll(AMT)];
+    if (!m.length) continue;
+    let before = line.slice(0, m[0].index).replace(/€|eur\b/gi, ' ');
+    if (!/[a-zäöüß]{3}/i.test(before)) continue;
+    let qty = null, unit = '';
+    const qu = [...before.matchAll(new RegExp('(?:^|\\s)(\\d+(?:[.,]\\d+)?)\\s*(' + UNITS + ')\\.?(?=\\s|$)', 'gi'))];
+    if (qu.length) { const q = qu[qu.length - 1]; qty = parseFloat(q[1].replace(',', '.')); unit = q[2]; before = before.slice(0, q.index) + ' ' + before.slice(q.index + q[0].length); }
+    else { const t = before.match(/\s(\d+(?:,\d+)?)\s*$/); if (t) { qty = parseFloat(t[1].replace(',', '.')); before = before.slice(0, t.index); } }
+    const desc = before.replace(/^\s*(\d+[a-z]?\.?\s+)+/i, '').replace(/\s+/g, ' ').trim();
+    if (!/[a-zäöüß]{3}/i.test(desc)) continue;
+    const vals = m.filter(x => !/^\s*%/.test(line.slice(x.index + x[0].length))).map(x => amt(x[0])).filter(v => v > 0);
+    if (!vals.length) continue;
+    let price = null;
+    if (vals.length >= 2) {
+      if (qty) for (let i = 0; i < vals.length - 1 && price == null; i++) for (let j = i + 1; j < vals.length; j++) if (Math.abs(qty * vals[i] - vals[j]) <= Math.max(2, vals[j] * 0.015)) { price = vals[i]; break; }
+      if (price == null) price = vals[vals.length - 2];
+    } else price = qty && qty > 1 && /gesamt/i.test(line) ? Math.round(vals[0] / qty) : vals[0];
+    items.push({ desc, qty, unit, price, extra: NOPRICE.test(desc) });
+  }
+  return items;
+}
+function guessMeta(lines) {
+  const date = (lines.join(' ').match(/\b(\d{1,2}\.\d{1,2}\.(?:\d{4}|\d{2}))\b/) || [])[1] || '';
+  const supplier = lines.slice(0, 8).find(l => /[a-zäöü]{3}/i.test(l) && !/rechnung|invoice|seite|datum|kunde|lieferschein/i.test(l) && l.length < 60) || '';
+  return { date, supplier };
+}
+
+/* Zuordnung zu Foodware-Artikeln */
+const norm = s => String(s || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim();
+const NOISE = new Set(['kiste', 'kisten', 'kst', 'ki', 'krt', 'karton', 'kg', 'stk', 'st', 'stck', 'stueck', 'kl', 'klasse', 'i', 'ii', 'ca', 'netto', 'x', 'bund', 'schale', 'steige', 'stg', 'kolli', 'ko', 'gr', 'groesse', 'kal', 'kaliber', 'hkl', 'ursprung', 'herkunft']);
+const cleanDesc = s => norm(s).split(' ').filter(w => w && !NOISE.has(w) && !/^\d+(er|kg|x|g)?$/.test(w)).join(' ');
+function grams(s) { const t = ' ' + s + ' ', g = new Set(); for (let i = 0; i < t.length - 2; i++) g.add(t.slice(i, i + 3)); return g; }
+function dice(a, b) { if (!a.size || !b.size) return 0; let n = 0; for (const x of a) if (b.has(x)) n++; return 2 * n / (a.size + b.size); }
+let artIndex = null;
+function buildArtIndex() { artIndex = Object.values(S.products).map(p => ({ id: p.id, u: norm(p.unit), g: grams(norm(fullName(p))), w: new Set(norm(fullName(p)).split(' ')) })); }
+function bestMatch(desc, invUnit) {
+  const iu = norm(invUnit);
+  const key = norm(desc);
+  if (S.maps[key] && S.products[S.maps[key].id]) return { id: S.maps[key].id, pack: S.maps[key].pack, score: 1, remembered: true };
+  const c = cleanDesc(desc); if (!c) return null;
+  const g = grams(c), words = c.split(' ');
+  let best = null;
+  for (const a of artIndex) {
+    let sc = dice(g, a.g);
+    if (words.some(w => w.length > 3 && a.w.has(w))) sc += 0.12;
+    if (iu === 'kg') sc += a.u === 'kg' ? 0.1 : -0.1;
+    if (!best || sc > best.score) best = { id: a.id, score: sc };
+  }
+  return best && best.score >= 0.42 ? best : null;
+}
+function guessPack(desc, invUnit, artUnit) {
+  const d = String(desc), au = norm(artUnit), iu = norm(invUnit);
+  if (au === 'kg' && iu === 'kg') return 1;
+  if (au === 'kg') { const k = d.match(/(\d+(?:[.,]\d+)?)\s*kg/i); if (k) return parseFloat(k[1].replace(',', '.')); }
+  if (au !== 'kg') { const n = d.match(/(\d+)\s*(?:er\b|x\b|stk|st\.|stück|stueck)/i); if (n && +n[1] > 1) return +n[1]; }
+  return 1;
+}
+
+/* KI (nur in der claude.ai-Version) */
+let ai = null, aiImages = null;
+(async () => {
+  try {
+    if (!(window.claude && window.claude.use)) return;
+    ai = await window.claude.use('sample');
+    if (!ai) return;
+    const lim = await ai.limits().catch(() => null);
+    aiImages = lim && lim.images ? lim.images : null;
+  } catch (e) { ai = null; }
+  updateInvoiceMode();
+})();
+function updateInvoiceMode() {
+  $('#invModeText').textContent = ai ? 'Die KI liest deine Rechnung. Du prüfst die Positionen, bevor etwas übernommen wird.' : 'PDF-Rechnungen werden direkt auf diesem Gerät gelesen. Du prüfst die Positionen, bevor etwas übernommen wird.';
+  $('#photoBtn').hidden = !aiImages;
+  $('#photoNote').hidden = !!aiImages;
+}
+const AI_PROMPT = `Du liest eine Lieferanten-Rechnung (Obst- und Gemüse-Großhandel) für einen Marktstand.
+Antworte NUR mit JSON in genau dieser Form:
+{"supplier":"Name des Lieferanten","date":"TT.MM.JJJJ","prices_gross":false,"items":[{"description":"Artikelbezeichnung wie auf der Rechnung","quantity":3,"unit":"Kiste","unit_price":18.00,"pack_size":12,"pack_unit":"Stck"}]}
+Regeln:
+- unit_price ist der Einzelpreis je Rechnungseinheit (je Kiste, je kg, je Bund ...), als Zahl mit Punkt, nicht der Zeilengesamtbetrag.
+- pack_size ist der Inhalt je Rechnungseinheit, wenn er erkennbar ist (Kiste mit 12 Stück: 12 und "Stck"; Kiste mit 5 kg: 5 und "kg"). Sonst null.
+- prices_gross ist nur dann true, wenn die Einzelpreise die Mehrwertsteuer enthalten.
+- Lass Summen, Steuer-, Pfand-, Leergut-, Fracht- und Rabattzeilen weg.
+- Erfinde nichts. Unlesbare Werte sind null.`;
+async function aiExtract(text, images) {
+  const input = text ? AI_PROMPT + '\n\nText der Rechnung:\n' + text.slice(0, 80000) : AI_PROMPT + '\n\nDie Rechnung ist als Bild angehängt.';
+  const r = await ai.json(input, images && images.length ? { images } : {});
+  if (!r || !Array.isArray(r.items)) throw { code: 'invalid_json' };
+  const items = r.items.filter(it => it && it.description && it.unit_price != null).map(it => ({
+    desc: String(it.description), qty: it.quantity ?? null, unit: it.unit || '', price: Math.round(Number(String(it.unit_price).replace(',', '.')) * 100),
+    pack: it.pack_size ? Number(it.pack_size) : null, packUnit: it.pack_unit || '', extra: NOPRICE.test(it.description)
+  })).filter(it => it.price > 0);
+  return { items, supplier: r.supplier || '', date: r.date || '', gross: !!r.prices_gross };
+}
+
+/* Ablauf */
+let inv = null;
+function busy(html) { const b = $('#invBusy'); b.hidden = !html; b.innerHTML = html || ''; }
+async function handleInvoice(file) {
+  if (!file) return;
+  if (!Object.keys(S.products).length) return msg('Erst Artikel importieren', 'Damit die App Rechnungspositionen deinen Artikeln zuordnen kann, importiere zuerst deinen Foodware-Export unter <b>Artikel</b>.');
+  const isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name), isImg = /^image\//.test(file.type);
+  if (!isPdf && !isImg) return msg('Dateityp nicht unterstützt', 'Bitte eine PDF-Rechnung oder ein Foto wählen.');
+  if (isImg && !aiImages) return msg('Fotos gehen hier nicht', 'Fotos von Rechnungen kann nur die KI lesen, und die gibt es in dieser Version nicht. Nimm die PDF-Rechnung vom Lieferanten oder öffne die App über deinen claude.ai-Link.');
+  let res, lines = [];
+  try {
+    if (isPdf) {
+      busy('<span class="spin"></span>PDF wird gelesen …');
+      const lib = await loadPdfJs();
+      const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      lines = await pdfLines(pdf);
+      const hasText = lines.join('').replace(/[^a-zäöü]/gi, '').length > 80;
+      if (ai) {
+        busy('<span class="spin"></span>Die KI liest die Rechnung. Das dauert meist 20–60 Sekunden …');
+        try { res = await aiExtract(hasText ? lines.join('\n') : '', hasText ? null : (aiImages ? await pdfImages(pdf) : null)); }
+        catch (e) { if (!hasText) throw e; res = null; }
+      }
+      if (!res) {
+        if (!hasText) throw new Error('Diese PDF enthält keinen lesbaren Text, sie ist wohl eingescannt. Solche Rechnungen kann nur die KI lesen, die gibt es in der Version unter deinem claude.ai-Link.');
+        res = { items: parseInvoiceLines(lines), gross: false, ...guessMeta(lines) };
+      }
+    } else {
+      busy('<span class="spin"></span>Die KI liest das Foto. Das dauert meist 20–60 Sekunden …');
+      res = await aiExtract('', [await shrinkImage(file)]);
+    }
+  } catch (e) {
+    busy('');
+    const code = e && e.code;
+    const t = code === 'not_granted' ? 'Du hast der KI den Zugriff nicht erlaubt. PDF-Rechnungen mit Text gehen trotzdem.'
+      : code === 'rate_limited' ? 'Gerade laufen zu viele Anfragen. Bitte in einer Minute nochmal versuchen.'
+      : code === 'invalid_json' ? 'Die KI konnte aus der Rechnung keine Positionen lesen. Ist das Foto scharf und die ganze Rechnung drauf?'
+      : (e && e.message) || 'Die Rechnung konnte nicht gelesen werden.';
+    return msg('Rechnung nicht gelesen', esc(t));
+  }
+  busy('');
+  if (!res.items.length) return msg('Keine Positionen gefunden', 'In der Rechnung wurden keine Zeilen mit Artikel und Preis erkannt. Du kannst die Einkaufspreise weiter von Hand bei den Artikeln eintragen.');
+  openInvoice(file.name, res);
+}
+function openInvoice(fileName, res) {
+  buildArtIndex();
+  const knownSup = Object.values(S.maps).find(m => m.supplier && norm(res.supplier).includes(norm(m.supplier)));
+  inv = { file: fileName, rows: res.items.map(it => {
+    const m = bestMatch(it.desc, it.unit), p = m && S.products[m.id];
+    let pack = m && m.remembered ? m.pack : it.pack && p && (!it.packUnit || norm(it.packUnit) === norm(p.unit) || (norm(p.unit) !== 'kg' && norm(it.packUnit) !== 'kg')) ? it.pack : p ? guessPack(it.desc, it.unit, p.unit) : 1;
+    return { desc: it.desc, qty: it.qty, unit: it.unit, price: it.price, pack, id: p ? p.id : '', use: !!p && !it.extra, remembered: !!(m && m.remembered) };
+  }) };
+  $('#invMeta').textContent = `${fileName} · ${inv.rows.length} Positionen erkannt · ${inv.rows.filter(r => r.id).length} davon einem Artikel zugeordnet`;
+  $('#invSupplier').value = knownSup ? knownSup.supplier : res.supplier || '';
+  $('#invDate').value = res.date || '';
+  $('#invGross').checked = !!res.gross;
+  $('#artList').innerHTML = sortedProducts().map(p => `<option value="${esc(p.id + ' · ' + fullName(p))}"></option>`).join('');
+  $('#invErr').hidden = true;
+  $('#invRows').innerHTML = inv.rows.map((r, i) => `
+    <div class="invrow" data-i="${i}">
+      <label class="chk"><input type="checkbox" class="iu" ${r.use ? 'checked' : ''} aria-label="Übernehmen"></label>
+      <div class="idesc"><b>${esc(r.desc)}</b><div class="secondary">${r.qty != null ? esc(String(r.qty).replace('.', ',')) + ' ' : ''}${esc(r.unit || '')}${r.remembered ? ' · Zuordnung gemerkt' : ''}</div></div>
+      <label class="f fp">Preis €<input class="ip" inputmode="decimal" value="${nf.format(r.price / 100)}"></label>
+      <label class="f fk">÷ Inhalt<input class="ik" inputmode="decimal" value="${String(r.pack).replace('.', ',')}"></label>
+      <label class="f art">Foodware-Artikel<input class="ia" list="artList" autocomplete="off" placeholder="Artikel suchen …" value="${r.id ? esc(r.id + ' · ' + fullName(S.products[r.id])) : ''}"></label>
+      <div class="ires"></div>
+    </div>`).join('');
+  inv.rows.forEach((_, i) => updateInvRow(i));
+  $('#invDialog').showModal();
+}
+function rowCost(r) {
+  const p = S.products[r.id]; if (!p) return null;
+  const pack = parseFloat(String(r.pack).replace(',', '.'));
+  if (!r.price || !(pack > 0)) return null;
+  let c = r.price / pack;
+  if ($('#invGross').checked) c = c / (1 + p.vat / 100);
+  return Math.round(c);
+}
+function updateInvRow(i) {
+  const r = inv.rows[i], el = $(`.invrow[data-i="${i}"]`), p = S.products[r.id];
+  el.classList.toggle('off', !r.use);
+  const out = el.querySelector('.ires');
+  if (!p) out.innerHTML = '<span class="none">Keinem Artikel zugeordnet</span>';
+  else {
+    const c = rowCost(r), m = c != null ? marginOf(p.want, c, p.vat) : null;
+    out.innerHTML = c == null ? '<span class="none">Preis oder Inhalt fehlt</span>'
+      : `<span class="money">${eur(c)} / ${esc(p.unit.trim())}</span> <span class="badge ${colorOf(m)}">${m != null ? nf1.format(m) + ' %' : '–'}</span><div class="secondary">VK ${eur(p.want)} · EK bisher ${p.cost != null ? eur(p.cost) : '–'}</div>${c >= p.want ? '<div class="none">Bitte prüfen: Einkauf teurer als Verkauf. Stimmen Artikel und Inhalt?</div>' : ''}`;
+  }
+  const n = inv.rows.filter(x => x.use && S.products[x.id] && rowCost(x) != null).length;
+  $('#invCount').textContent = `${n} von ${inv.rows.length} Positionen werden übernommen`;
+  $('#invApply').disabled = !n;
+}
+$('#invRows').addEventListener('input', e => {
+  const el = e.target.closest('.invrow'); if (!el) return;
+  const i = +el.dataset.i, r = inv.rows[i];
+  if (e.target.matches('.ip')) { const v = parseCents(e.target.value); r.price = v && !isNaN(v) ? v : null; }
+  if (e.target.matches('.ik')) r.pack = e.target.value;
+  if (e.target.matches('.iu')) r.use = e.target.checked;
+  if (e.target.matches('.ia')) {
+    const v = e.target.value.trim(), id = v.split(' · ')[0].trim();
+    const before = r.id;
+    r.id = S.products[id] ? id : (Object.values(S.products).find(p => norm(fullName(p)) === norm(v)) || {}).id || '';
+    if (r.id && r.id !== before) { r.use = true; el.querySelector('.iu').checked = true; const p = S.products[r.id]; if (String(r.pack) === '1') { r.pack = guessPack(r.desc, r.unit, p.unit); el.querySelector('.ik').value = String(r.pack).replace('.', ','); } }
+  }
+  updateInvRow(i);
+});
+$('#invGross').addEventListener('change', () => inv && inv.rows.forEach((_, i) => updateInvRow(i)));
+$('#invCancel').addEventListener('click', () => $('#invDialog').close());
+$('#invForm').addEventListener('submit', e => {
+  e.preventDefault(); if (!inv) return;
+  const sup = $('#invSupplier').value.trim().slice(0, 120), t = new Date().toISOString();
+  const done = [];
+  for (const r of inv.rows) {
+    if (!r.use) continue;
+    const p = S.products[r.id], c = rowCost(r); if (!p || c == null) continue;
+    S.maps[norm(r.desc)] = { id: p.id, pack: parseFloat(String(r.pack).replace(',', '.')), supplier: sup };
+    if (c !== p.cost || sup !== (p.supplier || '')) S.audit.push({ t, id: p.id, k: 'ek', o: p.cost, n: c, s: sup, src: 1 });
+    p.cost = c; if (sup) p.supplier = sup; p.costAt = t;
+    done.push(p);
+  }
+  if (!done.length) { $('#invErr').textContent = 'Keine Position ausgewählt, die übernommen werden kann.'; $('#invErr').hidden = false; return; }
+  S.invoices.push({ t, file: inv.file, supplier: sup, date: $('#invDate').value.trim(), count: done.length });
+  S.audit.push({ t, k: 'invoice', file: inv.file, supplier: sup, count: done.length });
+  if (!save()) return;
+  $('#invDialog').close(); render();
+  const crit = done.map(p => ({ p, m: marginOf(p.want, p.cost, p.vat) })).filter(x => x.m != null && x.m < 30);
+  msg('Einkaufspreise übernommen', `<b>${done.length}</b> Einkaufspreise gespeichert.` + (crit.length ? `<br><br>Diese Artikel liegen jetzt unter 30 % Marge:<br>${crit.slice(0, 8).map(x => `${esc(fullName(x.p))}: <b>${nf1.format(x.m)} %</b>`).join('<br>')}${crit.length > 8 ? `<br>… und ${crit.length - 8} weitere` : ''}` : '<br><br>Kein Artikel liegt unter 30 % Marge.'));
+  inv = null;
+});
+function renderInvoices() {
+  const list = (S.invoices || []).slice().reverse();
+  $('#invList').innerHTML = list.slice(0, 50).map(v => `<li><div class="grow"><span class="product">${esc(v.supplier || 'Unbekannter Lieferant')}</span>${v.date ? ` <span class="secondary">Rechnung vom ${esc(v.date)}</span>` : ''}<div class="secondary">${esc(v.file)}</div></div><span>${v.count} Einkaufspreise</span><span class="secondary">${fmtDate(v.t)}</span></li>`).join('')
+    || '<li class="secondary" style="justify-content:center">Noch keine Rechnung übernommen</li>';
+}
+document.addEventListener('change', e => { if (e.target.matches('[data-invoice]')) { handleInvoice(e.target.files[0]); e.target.value = ''; } });
+const dz = $('#dropzone');
+['dragenter', 'dragover'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('over'); }));
+dz.addEventListener('drop', e => handleInvoice(e.dataTransfer.files[0]));
+
 /* ============ Navigation & Events ============ */
 function show(view) {
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'view-' + view);
@@ -747,12 +1121,12 @@ $('#restoreInput').addEventListener('change', async e => {
   catch (_) { return msg('Kein gültiges Backup', 'Diese Datei ist kein Smart-Pricing-Backup.'); }
   const n = Object.keys(data.products).length;
   if (!await msg('Backup laden?', `Das Backup enthält <b>${n}</b> Artikel. Alle aktuellen Daten auf diesem Gerät werden ersetzt.`, 'Backup laden')) return;
-  S = Object.assign({ products: {}, audit: [], lastImport: null }, data);
+  S = Object.assign(fresh(), data);
   if (save()) { render(); toast('Backup geladen'); }
 });
 $('#wipeBtn').addEventListener('click', async () => {
   if (!await msg('Alle Daten löschen?', 'Artikel, Einkaufspreise, offene Änderungen und Verlauf werden aus diesem Browser entfernt. Das kann nicht rückgängig gemacht werden.', 'Endgültig löschen')) return;
-  S = { products: {}, audit: [], lastImport: null };
+  S = fresh();
   if (save()) { render(); toast('Alle Daten gelöscht'); }
 });
 window.addEventListener('storage', e => { if (e.key === KEY) { load(); render(); } });
