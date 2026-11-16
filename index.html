@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mein Wochenmarkt Smart Pricing</title>
+<meta name="theme-color" content="#021b15">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Smart Pricing">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+/* Dunkles Theme: Dunkelgrün mit Lime-Akzent.
+   Layout: feste Seitenleiste (Desktop) bzw. Tab-Leiste unten (Handy), Kennzahlen oben, Artikelliste darunter. */
+:root{
+  --lime:#e3ed6c;--on-lime:#021b15;--lime-soft:#26360f;
+  --surface:#021b15;--raised:#0b2b23;--sunken:#01110d;--hover:#10342a;
+  --ink:#f4f6e8;--muted:#a9b8ae;--faint:#7d9186;--line:#1e3d33;--line-strong:#5e7c70;
+  --success:#6fd39b;--warn:#ffb74d;--warn-soft:#3a2a0c;--danger:#ff6b5e;
+  --m-light:#90ee90;--m-light-ink:#062b12;--m-dark:#1d8a3d;--m-dark-ink:#ffffff;--m-orange:#ff9800;--m-orange-ink:#2b1a00;--m-red:#f44336;--m-red-ink:#ffffff;
+  --scrim:rgba(1,10,8,.78);
+  --font-sans:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-accent:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --r-sm:6px;--r-md:10px;--r-lg:16px;--r-xl:24px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--surface);color:var(--ink);font:15px/1.5 var(--font-sans);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+em{font-family:var(--font-accent);font-style:italic;font-weight:400;color:var(--lime);font-size:1.12em;letter-spacing:0;line-height:.9}
+
+/* Seitenleiste */
+aside{width:248px;position:fixed;inset:0 auto 0 0;background:var(--sunken);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:28px 16px;z-index:5}
+.logo{display:flex;flex-direction:column;gap:6px;padding:0 12px 32px}
+.wordmark{font-weight:800;font-size:21px;letter-spacing:-.02em;line-height:1;color:var(--ink);white-space:nowrap}
+.wordmark em{font-size:1.15em;margin-right:1px}
+.logo small{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.logo .mini{display:none}
+.nav{display:flex;gap:12px;align-items:center;border:0;background:none;color:var(--muted);text-align:left;width:100%;padding:12px 14px;border-radius:var(--r-md);font-weight:600;margin-bottom:4px;position:relative}
+.nav:hover{background:var(--raised);color:var(--ink)}
+.nav.active{background:var(--lime-soft);color:var(--lime)}
+.nav .ico{font-size:18px;width:22px;text-align:center}
+.nav .count{margin-left:auto;background:var(--lime);color:var(--on-lime);font-size:11px;font-weight:800;border-radius:20px;padding:1px 8px}
+.nav.soon{opacity:.5}
+.sidebottom{margin-top:auto;padding:14px 12px 0;border-top:1px solid var(--line)}
+.sidebottom strong{display:block;font-weight:700}
+.sidebottom small{color:var(--muted)}
+
+main{margin-left:248px;padding:36px clamp(20px,4vw,56px) 64px;max-width:1800px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--lime);font-weight:600}
+h1{font-size:clamp(30px,3.4vw,44px);letter-spacing:-.02em;font-weight:800;margin:8px 0 8px;line-height:1.08;text-wrap:balance}
+p.sub{color:var(--muted);margin:0}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--raised);font-weight:600;color:var(--muted);font-size:12px;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:28px 0}
+.card{background:var(--raised);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;text-align:left;color:var(--ink)}
+button.card{cursor:pointer;transition:border-color .15s,transform .15s}
+button.card:hover{border-color:var(--line-strong);transform:translateY(-1px)}
+.card .label{color:var(--muted);font-weight:600;font-size:13px}
+.card .value{font-size:34px;letter-spacing:-.02em;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums;line-height:1.1}
+.card .note{font-size:12.5px;color:var(--faint);margin-top:4px}
+.card.highlight{background:var(--lime);color:var(--on-lime);border-color:var(--lime)}
+.card.highlight .label,.card.highlight .note{color:#2f4a16}
+
+.panel{background:var(--raised);border:1px solid var(--line);border-radius:var(--r-xl);overflow:hidden;margin-bottom:20px}
+.panelhead{padding:22px 24px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.panelhead h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.panelhead p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:transparent;color:var(--ink);padding:0 16px;text-decoration:none;font-weight:600;white-space:nowrap;cursor:pointer;font-size:14px}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--lime);border-color:var(--lime);color:var(--on-lime)}
+.btn.primary:hover{filter:brightness(.95);background:var(--lime)}
+.btn.danger{color:var(--danger);border-color:#6e3530}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.filebtn input{display:none}
+
+.toolbar{padding:0 24px 16px;display:flex;gap:10px;flex-wrap:wrap}
+.search{flex:1;min-width:180px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunken);padding:11px 14px;outline:none;color:var(--ink)}
+.search::placeholder{color:var(--faint)}
+.search:focus,select:focus,.field input:focus{border-color:var(--lime);outline:none}
+select{border:1px solid var(--line);background:var(--sunken);padding:11px 12px;border-radius:var(--r-md);color:var(--ink);max-width:100%}
+
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;background:var(--sunken);color:var(--faint);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:12px 16px;white-space:nowrap;user-select:none}
+th[data-sort]{cursor:pointer}
+th[data-sort]:hover{color:var(--ink)}
+th .arrow{color:var(--lime)}
+td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--hover)}
+.product{font-weight:700;color:var(--ink)}
+.secondary{font-size:12.5px;color:var(--faint)}
+.money{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.old{text-decoration:line-through;color:var(--faint);font-weight:500;font-size:12px;margin-right:6px}
+.badge{display:inline-block;padding:4px 10px;border-radius:var(--r-sm);font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:13.5px}
+.badge.light{background:var(--m-light);color:var(--m-light-ink)}
+.badge.dark{background:var(--m-dark);color:var(--m-dark-ink)}
+.badge.orange{background:var(--m-orange);color:var(--m-orange-ink)}
+.badge.red{background:var(--m-red);color:var(--m-red-ink)}
+.badge.unknown{background:transparent;color:var(--lime);border:1px dashed #7c8a3a;font-weight:700;font-size:12px;padding:3px 9px}
+.pending{display:inline-block;font-size:10.5px;background:var(--warn-soft);color:var(--warn);border-radius:var(--r-sm);padding:2px 7px;margin-left:6px;font-weight:700;vertical-align:1px}
+.pending.gone{background:var(--sunken);color:var(--faint)}
+.edit{border:1px solid var(--line-strong);background:transparent;padding:6px 10px;border-radius:var(--r-md);font-weight:600;color:var(--lime);white-space:nowrap}
+.edit:hover{background:var(--lime-soft)}
+.footer{padding:14px 24px;background:var(--sunken);color:var(--faint);font-size:12.5px;border-top:1px solid var(--line)}
+.notice{padding:14px 18px;background:var(--lime-soft);border:1px solid #3d5218;color:#dfe8a8;border-radius:var(--r-lg);margin:18px 0;font-size:13.5px}
+.notice b{color:var(--lime)}
+.notice.ok{background:var(--success-soft,#0f3a27);border-color:#1e5a3d;color:#bfe9cf}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:#dfe8a8}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty strong{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+.more{display:flex;margin:14px auto}
+
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:center;gap:12px;padding:13px 24px;border-top:1px solid var(--line);flex-wrap:wrap}
+.list .grow{flex:1;min-width:160px}
+.steps{margin:6px 0 0;padding-left:20px}
+.steps li{margin:5px 0}
+.datagrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;padding:0 24px 24px}
+.datagrid .card{background:var(--sunken)}
+.datagrid .card h3{margin:0 0 4px;font-size:17px;font-weight:700}
+.datagrid .card p{color:var(--muted);margin:0 0 16px;font-size:13.5px}
+
+dialog{border:1px solid var(--line);padding:0;border-radius:var(--r-xl);width:min(470px,calc(100% - 24px));box-shadow:0 20px 70px rgba(0,0,0,.6);color:var(--ink);background:var(--raised);max-height:calc(100dvh - 24px)}
+dialog::backdrop{background:var(--scrim)}
+.dialog{padding:24px 24px 20px;overflow:auto}
+.dialog h2{margin:0 0 3px;font-size:23px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.dialog .meta{color:var(--muted);margin:0 0 14px;font-size:13.5px}
+.field{display:block;margin:12px 0;font-weight:600;font-size:12.5px;color:var(--muted)}
+.field input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid var(--line-strong);border-radius:var(--r-md);font-size:17px;font-weight:700;background:var(--sunken);color:var(--ink)}
+.field input::placeholder{color:var(--faint);font-weight:500}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-weight:500;color:var(--faint);font-size:12px;margin-top:5px}
+.preview{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;margin:14px 0 4px}
+.preview .lbl{font-size:13px;color:var(--muted);font-weight:600}
+.suggest{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.suggest button{border:1px solid var(--line-strong);background:transparent;border-radius:var(--r-md);padding:7px 10px;font-size:12.5px;font-weight:700}
+.suggest button:hover{border-color:var(--lime);color:var(--lime)}
+.suggest .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+.dialogbuttons{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;flex-wrap:wrap}
+.dialogbuttons .left{margin-right:auto}
+.history{margin-top:18px;border-top:1px solid var(--line);padding-top:12px;font-size:12.5px;color:var(--muted)}
+.history ul{list-style:none;padding:0;margin:6px 0 0;max-height:130px;overflow:auto}
+.history li{padding:3px 0}
+.err{color:var(--danger);font-size:13px;font-weight:600;margin-top:6px}
+
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--lime);color:var(--on-lime);padding:12px 18px;border-radius:var(--r-md);font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:50;max-width:calc(100% - 32px);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Tablet */
+@media(max-width:1000px){
+  aside{width:76px;padding:22px 10px}
+  .logo .wordmark,.logo small,.nav span:not(.ico),.sidebottom,.nav .count{display:none}
+  .logo .mini{display:grid;place-items:center;width:44px;height:44px;margin:0 auto;border-radius:12px;background:var(--lime);color:var(--on-lime);font:800 20px/1 var(--font-sans);letter-spacing:-.03em}
+  .logo{padding:0 0 24px}
+  .nav{justify-content:center;padding:12px}
+  main{margin-left:76px}
+  .cards{grid-template-columns:repeat(2,1fr)}
+}
+/* Handy */
+@media(max-width:700px){
+  aside{inset:auto 0 0 0;width:auto;height:auto;flex-direction:row;padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left,0px));border-right:0;border-top:1px solid var(--line);justify-content:space-around}
+  .logo{display:none}
+  .nav{flex-direction:column;gap:1px;padding:6px 4px;margin:0;font-size:11px;width:auto;flex:1}
+  .nav span:not(.ico){display:block}
+  .nav .count{display:block;position:absolute;top:2px;right:calc(50% - 26px);font-size:10px;padding:0 6px}
+  .nav.soon{display:none}
+  main{margin:0;padding:calc(18px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right,0px)) calc(92px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left,0px))}
+  .mobilelogo{display:block;margin-bottom:18px;font-size:19px}
+  .top .pill{display:none}
+  .cards{gap:9px;margin:18px 0}
+  .card{padding:14px;border-radius:14px}
+  .card .value{font-size:26px;margin-top:4px}
+  .panelhead,.toolbar{padding-left:14px;padding-right:14px}
+  .list li{padding:12px 14px}
+  .datagrid{padding:0 14px 14px}
+  .actions{width:100%}
+  .panelhead .actions .btn{flex:1;padding:0 8px;font-size:13px}
+  .footer{padding:14px}
+  .toolbar select{flex:1}
+  /* Artikel als Karten: Name oben, darunter EK | VK | Marge mit Beschriftung */
+  thead{display:none}
+  table,tbody{display:block}
+  tbody tr{display:grid;grid-template-columns:1fr 1fr auto;grid-template-areas:"name name name" "ek vk margin";column-gap:10px;row-gap:8px;padding:13px 14px;border-top:1px solid var(--line)}
+  td{padding:0;border:0}
+  tbody tr:hover td{background:none}
+  td.c-name{grid-area:name}
+  td.c-ek{grid-area:ek}
+  td.c-vk{grid-area:vk}
+  td.c-margin{grid-area:margin;text-align:right}
+  td.c-ek::before,td.c-vk::before,td.c-margin::before{content:attr(data-label);display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:2px}
+  td.c-id,td.c-unit,td.c-sup,td.c-act{display:none}
+  .badge{font-size:13px}
+}
+@media(min-width:701px){.c-name .idunit{display:none}}
+.mobilelogo{display:none}
+</style>
+</head>
+<body>
+<aside>
+  <div class="logo"><span class="wordmark"><em>mein</em>wochenmarkt</span><span class="mini" aria-hidden="true">m.</span><small>Smart Pricing</small></div>
+  <button class="nav active" data-view="artikel"><span class="ico">▦</span><span>Artikel</span></button>
+  <button class="nav" data-view="aenderungen"><span class="ico">⇄</span><span>Änderungen</span><b class="count" id="navCount" hidden></b></button>
+  <button class="nav" data-view="daten"><span class="ico">⇅</span><span>Daten</span></button>
+  <button class="nav soon" data-soon="Der KI-Preislistenagent folgt in der nächsten Ausbaustufe. Es ist noch keine E-Mail-Verbindung eingerichtet."><span class="ico">✧</span><span>KI-Einkauf</span></button>
+  <button class="nav soon" data-soon="Der Lieferantenvergleich folgt nach der E-Mail-Anbindung."><span class="ico">♧</span><span>Lieferanten</span></button>
+  <div class="sidebottom"><strong>Mein Wochenmarkt</strong><small id="sideInfo">Foodware CSV · Testbetrieb</small></div>
+</aside>
+
+<main>
+  <!-- ARTIKEL -->
+  <section id="view-artikel">
+    <div class="mobilelogo wordmark"><em>mein</em>wochenmarkt</div>
+    <div class="top">
+      <div><div class="eyebrow">Preismanagement / Dashboard</div><h1>Deine Preise. Dein <em>Überblick.</em></h1><p class="sub">Alle Artikel, Einkaufspreise und Margen an einem Ort.</p></div>
+      <span class="pill"><span class="dot"></span> Daten nur auf diesem Gerät</span>
+    </div>
+    <div class="cards">
+      <button class="card highlight" data-quick="all"><div class="label">Artikel im Sortiment</div><div class="value" id="kCount">0</div><div class="note" id="kCountNote">Aus Foodware importiert</div></button>
+      <button class="card" data-quick="known"><div class="label">Ø Rohertragsmarge</div><div class="value" id="kAvg">–</div><div class="note" id="kAvgNote">0 Artikel mit Einkaufspreis</div></button>
+      <button class="card" data-quick="red"><div class="label">Kritische Artikel</div><div class="value" id="kLow">0</div><div class="note">Marge unter 30 %</div></button>
+      <button class="card" data-quick="pending"><div class="label">Offene Preisänderungen</div><div class="value" id="kPending">0</div><div class="note">Noch nicht in Foodware bestätigt</div></button>
+    </div>
+
+    <section class="panel">
+      <div class="panelhead">
+        <div><h2>Artikel &amp; Preisübersicht</h2><p>Zeile antippen, um Verkaufs- und Einkaufspreis zu bearbeiten</p></div>
+        <div class="actions">
+          <label class="btn filebtn">↑ Foodware CSV importieren<input type="file" accept=".csv,.CSV,.txt,text/csv" data-import></label>
+          <button class="btn primary" data-export="all">↓ Test-CSV exportieren</button>
+        </div>
+      </div>
+      <div class="toolbar" style="padding-bottom:0"><div class="notice" id="marginHint" style="margin:0 0 14px;flex:1">
+        <b id="marginHintTitle">So siehst du deine Margen:</b> <span id="marginHintText">Tippe einen Artikel an und trag den Einkaufspreis netto ein. Die Marge erscheint dann sofort in der Liste.</span>
+        <div class="legend"><span><i style="background:var(--m-light)"></i>ab 50 %</span><span><i style="background:var(--m-dark)"></i>40–50 %</span><span><i style="background:var(--m-orange)"></i>30–40 %</span><span><i style="background:var(--m-red)"></i>unter 30 %</span></div>
+      </div></div>
+      <div class="toolbar">
+        <input class="search" id="search" type="search" placeholder="⌕  Artikel oder Artikelnummer suchen …" autocomplete="off">
+        <select id="filter" aria-label="Filter">
+          <option value="all">Alle Artikel</option>
+          <option value="pending">Nur offene Änderungen</option>
+          <option value="light">Hellgrün · ab 50 %</option>
+          <option value="dark">Dunkelgrün · 40–50 %</option>
+          <option value="orange">Orange · 30–40 %</option>
+          <option value="red">Rot · unter 30 %</option>
+          <option value="known">Mit Einkaufspreis</option>
+          <option value="unknown">Ohne Einkaufspreis</option>
+        </select>
+        <select id="unitFilter" aria-label="Einheit"><option value="">Alle Einheiten</option></select>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr>
+            <th data-sort="name">Artikel</th><th data-sort="id">Art.-Nr.</th><th data-sort="unit">Einheit</th>
+            <th data-sort="cost">EK netto</th><th data-sort="price">VK brutto</th><th data-sort="margin">Marge</th>
+            <th data-sort="supplier">Lieferant</th><th></th>
+          </tr></thead>
+          <tbody id="items"></tbody>
+        </table>
+        <div id="empty" class="empty" hidden></div>
+        <button class="btn more" id="more" hidden>Weitere Artikel anzeigen</button>
+      </div>
+      <div class="footer">Marge = (Netto-VK − Netto-EK) ÷ Netto-VK · 100. Einkaufspreise netto je Verkaufseinheit eingeben (bei kg-Artikeln also pro kg). Preisänderungen gelten erst, wenn ein neuer Foodware-Export sie bestätigt.</div>
+    </section>
+  </section>
+
+  <!-- ÄNDERUNGEN -->
+  <section id="view-aenderungen" hidden>
+    <div class="top"><div><div class="eyebrow">Preisänderungen</div><h1>Was noch in <em>Foodware</em> muss.</h1><p class="sub">Geänderte Verkaufspreise, die Foodware noch nicht bestätigt hat.</p></div></div>
+    <div class="notice"><b>So kommen die Preise in die Kasse:</b>
+      <ol class="steps">
+        <li>„Test-CSV exportieren“ und die Datei in Foodware importieren. Beim ersten Mal nur mit einem einzelnen Testartikel und nach einer Sicherung.</li>
+        <li>In Foodware einen neuen Artikel-Export erstellen.</li>
+        <li>Diesen Export hier importieren. Jede Änderung, deren Preis Foodware jetzt hat, wird automatisch als erledigt abgehakt.</li>
+      </ol>
+    </div>
+    <section class="panel">
+      <div class="panelhead">
+        <div><h2>Offene Änderungen</h2><p id="pendingSub">Keine offenen Änderungen</p></div>
+        <div class="actions">
+          <button class="btn" data-export="changed">↓ Nur Änderungen exportieren</button>
+          <button class="btn primary" data-export="all">↓ Test-CSV exportieren</button>
+        </div>
+      </div>
+      <ul class="list" id="pendingList"></ul>
+    </section>
+    <section class="panel">
+      <div class="panelhead"><div><h2>Verlauf</h2><p>Alle Preisänderungen und Importe, neueste zuerst</p></div></div>
+      <ul class="list" id="auditList"></ul>
+      <button class="btn more" id="auditMore" hidden>Älteren Verlauf anzeigen</button>
+    </section>
+  </section>
+
+  <!-- DATEN -->
+  <section id="view-daten" hidden>
+    <div class="top"><div><div class="eyebrow">Daten &amp; Sicherung</div><h1>Import, Export, <em>Backup.</em></h1><p class="sub">Deine Daten bleiben in diesem Browser auf diesem Gerät. Sie werden nirgendwohin hochgeladen.</p></div></div>
+    <div class="notice" id="lastImportInfo">Noch kein Foodware-Export importiert.</div>
+    <section class="panel">
+      <div class="panelhead"><div><h2>Foodware</h2><p>Artikel-Export: 7 Spalten ohne Kopfzeile, Semikolon, Windows-1252, Dezimalkomma</p></div></div>
+      <div class="datagrid">
+        <div class="card"><h3>Export importieren</h3><p>Neue Artikel kommen dazu, Namen und Foodware-Preise werden aktualisiert. Deine offenen Änderungen und Einkaufspreise bleiben erhalten.</p><label class="btn primary filebtn">↑ Foodware CSV wählen<input type="file" accept=".csv,.CSV,.txt,text/csv" data-import></label></div>
+        <div class="card"><h3>Test-CSV für Foodware</h3><p>Alle Artikel im Foodware-Format mit den neuen Preisen. Erst mit einem Testartikel und nach einer Sicherung in Foodware importieren.</p><button class="btn" data-export="all">↓ Alle Artikel</button> <button class="btn" data-export="changed">↓ Nur Änderungen</button></div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panelhead"><div><h2>Sicherung</h2><p>Zum Übertragen auf ein anderes Gerät (z. B. vom PC aufs iPhone) oder als Backup</p></div></div>
+      <div class="datagrid">
+        <div class="card"><h3>Backup speichern</h3><p>Alle Artikel, Einkaufspreise, Lieferanten, offenen Änderungen und der Verlauf in einer Datei.</p><button class="btn primary" id="backupBtn">↓ Backup herunterladen</button></div>
+        <div class="card"><h3>Backup laden</h3><p>Ersetzt alle Daten auf diesem Gerät durch das Backup.</p><label class="btn filebtn">↑ Backup wählen<input type="file" accept=".json,application/json" id="restoreInput"></label></div>
+        <div class="card"><h3>Alles löschen</h3><p>Entfernt alle Daten aus diesem Browser. Vorher ein Backup speichern.</p><button class="btn danger" id="wipeBtn">Daten löschen</button></div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<!-- Bearbeiten -->
+<dialog id="editDialog">
+  <form class="dialog" id="editForm" method="dialog" novalidate>
+    <h2 id="eTitle">Artikel</h2>
+    <p class="meta" id="eMeta"></p>
+    <div class="row2">
+      <label class="field">Verkaufspreis brutto (€)<input id="ePrice" inputmode="decimal" autocomplete="off"><div class="hint" id="eFw"></div></label>
+      <label class="field">Einkaufspreis netto (€)<input id="eCost" inputmode="decimal" autocomplete="off" placeholder="z. B. 2,10"><div class="hint" id="eCostHint">je Einheit</div></label>
+    </div>
+    <label class="field">Lieferant<input id="eSupplier" maxlength="120" placeholder="z. B. Großhändler A" autocomplete="off"></label>
+    <div class="preview"><span class="lbl">Marge mit diesen Preisen</span><span class="badge unknown" id="eMargin">–</span></div>
+    <div class="suggest" id="eSuggest"></div>
+    <div class="err" id="eErr" hidden></div>
+    <div class="dialogbuttons">
+      <button type="button" class="btn left" id="eRevert" hidden>Änderung verwerfen</button>
+      <button type="button" class="btn" id="eCancel">Abbrechen</button>
+      <button type="submit" class="btn primary">Speichern</button>
+    </div>
+    <div class="history" id="eHistory" hidden><b>Verlauf</b><ul></ul></div>
+  </form>
+</dialog>
+
+<!-- Meldung -->
+<dialog id="msgDialog">
+  <form class="dialog" method="dialog">
+    <h2 id="mTitle"></h2>
+    <div id="mBody" class="meta" style="font-size:14px;color:#3d4a41"></div>
+    <div class="dialogbuttons"><button class="btn" value="cancel" id="mCancel">Abbrechen</button><button class="btn primary" value="ok" id="mOk">OK</button></div>
+  </form>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ============ Speicher ============ */
+const KEY = 'mwm-smart-pricing-v1';
+let S = { products: {}, audit: [], lastImport: null };
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign({ products: {}, audit: [], lastImport: null }, JSON.parse(raw)); }
+  catch (e) { console.warn(e); }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); return true; }
+  catch (e) { msg('Speichern fehlgeschlagen', 'Der Browser hat das Speichern verweigert (privater Modus oder Speicher voll). Bitte ein Backup herunterladen.'); return false; }
+}
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+/* ============ Geld & Zahlen (in Cent) ============ */
+function parseCents(v) {
+  let s = String(v ?? '').trim().replace(/\s|€/g, '');
+  if (!s) return null;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  if (!/^\d+(\.\d+)?$/.test(s)) return NaN;
+  const n = Math.round(parseFloat(s) * 100);
+  return n > 99999999 ? NaN : n;
+}
+const nf = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const nf1 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const eur = c => c == null ? '–' : nf.format(c / 100) + ' €';
+const plain = c => nf.format(c / 100).replace(/\./g, '');
+function marginOf(priceCents, costCents, vat) {
+  if (costCents == null || priceCents == null) return null;
+  const net = priceCents / (1 + vat / 100);
+  if (net <= 0) return null;
+  return (net - costCents) / net * 100;
+}
+function colorOf(m) { return m == null ? 'unknown' : m >= 50 ? 'light' : m >= 40 ? 'dark' : m >= 30 ? 'orange' : 'red'; }
+function priceForMargin(costCents, vat, m) { return Math.ceil(costCents / (1 - m / 100) * (1 + vat / 100) - 1e-9); }
+const fmtDate = iso => iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fullName = p => (p.name.trim() + ' ' + (p.name2 || '').trim()).trim();
+
+/* ============ Windows-1252 ============ */
+const CP = (() => {
+  const dec = new TextDecoder('windows-1252'), enc = new Map();
+  for (let b = 0; b < 256; b++) { const ch = dec.decode(new Uint8Array([b])); if (!enc.has(ch)) enc.set(ch, b); }
+  return enc;
+})();
+function encode1252(str) {
+  const out = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) {
+    const b = CP.get(str[i]);
+    if (b === undefined) throw new Error('Zeichen „' + str[i] + '“ kann nicht als Windows-1252 gespeichert werden');
+    out[i] = b;
+  }
+  return out;
+}
+function decodeFile(buf) {
+  const u = new Uint8Array(buf);
+  if (u[0] === 0xEF && u[1] === 0xBB && u[2] === 0xBF) return new TextDecoder('utf-8').decode(u.subarray(3));
+  try { const t = new TextDecoder('utf-8', { fatal: true }).decode(u); if (/[^\x00-\x7f]/.test(t)) return t; } catch (e) {}
+  return new TextDecoder('windows-1252').decode(u);
+}
+
+/* ============ CSV ============ */
+function parseCSV(text, sep = ';') {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"' && f === '') q = true;
+    else if (c === sep) { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+const csvField = v => /[;"\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+
+function parseFoodware(text) {
+  const rows = parseCSV(text), out = [], ids = new Set(), errors = [];
+  rows.forEach((r, i) => {
+    const n = i + 1;
+    if (!r.length || r.every(x => !x.trim())) return;
+    if (r.length !== 7) { errors.push(`Zeile ${n}: 7 Spalten erwartet, ${r.length} gefunden`); return; }
+    // Texte unverändert lassen (auch Leerzeichen am Ende), damit der Export exakt zu Foodware passt
+    const [idRaw, name, name2, unit, grp, vatS, priceS] = r, id = idRaw.trim();
+    if (!id || !name.trim()) { errors.push(`Zeile ${n}: Artikelnummer oder Name fehlt`); return; }
+    if (ids.has(id)) { errors.push(`Zeile ${n}: Artikelnummer ${id} doppelt`); return; }
+    const vat = parseCents(vatS), price = parseCents(priceS);
+    if (vat == null || isNaN(vat) || price == null || isNaN(price)) { errors.push(`Zeile ${n}: ungültiger Preis oder Steuersatz`); return; }
+    ids.add(id); out.push({ id, name, name2, unit, grp, vat: vat / 100, price });
+  });
+  return { rows: out, errors };
+}
+
+/* ============ Import ============ */
+async function importFile(file) {
+  if (!file) return;
+  if (file.size > 5e6) return msg('Datei zu groß', 'Die Datei ist größer als 5 MB. Ist das wirklich ein Foodware-Artikelexport?');
+  const { rows, errors } = parseFoodware(decodeFile(await file.arrayBuffer()));
+  if (errors.length) {
+    return msg('Import abgebrochen', `<p>Die Datei passt nicht zum Foodware-Format. Es wurde nichts geändert.</p><p>${errors.slice(0, 6).map(esc).join('<br>')}${errors.length > 6 ? `<br>… und ${errors.length - 6} weitere` : ''}</p>`);
+  }
+  if (!rows.length) return msg('Leere Datei', 'In der Datei wurden keine Artikel gefunden.');
+  const t = new Date().toISOString(), st = { neu: 0, bestaetigt: 0, offen: 0, fwGeaendert: 0, fehlt: 0 };
+  const seen = new Set();
+  for (const r of rows) {
+    seen.add(r.id);
+    const p = S.products[r.id];
+    if (!p) {
+      S.products[r.id] = { id: r.id, name: r.name, name2: r.name2, unit: r.unit, grp: r.grp, vat: r.vat, fw: r.price, want: r.price, cost: null, supplier: '', costAt: null, changedAt: null, missing: false };
+      st.neu++; continue;
+    }
+    const wasPending = p.want !== p.fw;
+    if (p.fw !== r.price) st.fwGeaendert++;
+    Object.assign(p, { name: r.name, name2: r.name2, unit: r.unit, grp: r.grp, vat: r.vat, fw: r.price, missing: false });
+    if (wasPending) {
+      if (p.want === r.price) { st.bestaetigt++; p.changedAt = null; S.audit.push({ t, id: p.id, k: 'ok', n: r.price }); }
+      else st.offen++;
+    } else p.want = r.price;
+  }
+  for (const id in S.products) if (!seen.has(id)) { S.products[id].missing = true; st.fehlt++; }
+  S.lastImport = { t, file: file.name, count: rows.length };
+  S.audit.push({ t, k: 'import', file: file.name, count: rows.length, neu: st.neu, ok: st.bestaetigt });
+  if (!save()) return;
+  render();
+  const parts = [`<b>${rows.length}</b> Artikel gelesen`];
+  if (st.neu) parts.push(`<b>${st.neu}</b> neu`);
+  if (st.fwGeaendert) parts.push(`<b>${st.fwGeaendert}</b> Foodware-Preise geändert`);
+  if (st.bestaetigt) parts.push(`<b>${st.bestaetigt}</b> deiner Änderungen jetzt in Foodware bestätigt ✓`);
+  if (st.offen) parts.push(`<b>${st.offen}</b> Änderungen weiterhin offen`);
+  if (st.fehlt) parts.push(`<b>${st.fehlt}</b> Artikel nicht mehr im Export (bleiben gespeichert)`);
+  msg('Import abgeschlossen', parts.join('<br>'));
+}
+
+/* ============ Export ============ */
+async function download(name, data, type) {
+  // In einer claude.ai-Vorschau laufen Downloads über die Plattform, sonst über einen normalen Link
+  const dl = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
+  if (dl) {
+    try { await dl.save({ filename: name, data: new Blob([data], { type }) }); }
+    catch (e) { if (e && e.code !== 'declined') toast('Download hier nicht möglich'); }
+    return;
+  }
+  const url = URL.createObjectURL(new Blob([data], { type }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function sortedProducts() { return Object.values(S.products).sort((a, b) => (parseInt(a.id) - parseInt(b.id)) || a.id.localeCompare(b.id)); }
+function exportFoodware(onlyChanged) {
+  let list = sortedProducts();
+  if (onlyChanged) list = list.filter(p => p.want !== p.fw);
+  if (!list.length) return toast(onlyChanged ? 'Keine offenen Änderungen zum Exportieren' : 'Noch keine Artikel importiert');
+  const lines = list.map(p => [p.id, p.name, p.name2, p.unit, p.grp, plain(Math.round(p.vat * 100)), plain(p.want)].map(csvField).join(';'));
+  let bytes;
+  try { bytes = encode1252(lines.join('\r\n') + '\r\n'); }
+  catch (e) { return msg('Export nicht möglich', esc(e.message) + '. Bitte den Artikelnamen in Foodware prüfen.'); }
+  const d = new Date().toISOString().slice(0, 10);
+  download(`foodware_preise_${onlyChanged ? 'AENDERUNGEN' : 'TEST'}_${d}.csv`, bytes, 'text/csv;charset=windows-1252');
+  toast(`${list.length} Artikel exportiert`);
+}
+
+/* ============ Ansicht ============ */
+const $ = s => document.querySelector(s);
+const state = { q: '', filter: 'all', unit: '', sort: 'id', dir: 1, limit: 150, auditLimit: 60 };
+const enrich = p => { const m = marginOf(p.want, p.cost, p.vat); return { p, m, c: colorOf(m), pending: p.want !== p.fw }; };
+
+function render() {
+  const all = Object.values(S.products).map(enrich);
+  const known = all.filter(x => x.m != null), pending = all.filter(x => x.pending);
+  $('#kCount').textContent = all.length;
+  $('#kCountNote').textContent = S.lastImport ? 'Stand ' + fmtDate(S.lastImport.t) : 'Noch nichts importiert';
+  $('#kAvg').textContent = known.length ? nf1.format(known.reduce((s, x) => s + x.m, 0) / known.length) + ' %' : '–';
+  $('#kAvgNote').textContent = `${known.length} Artikel mit Einkaufspreis`;
+  $('#kLow').textContent = known.filter(x => x.m < 30).length;
+  $('#marginHint').hidden = !all.length;
+  $('#marginHintTitle').textContent = known.length ? 'Margen-Farben:' : 'So siehst du deine Margen:';
+  $('#marginHintText').textContent = known.length
+    ? `${known.length} von ${all.length} Artikeln haben einen Einkaufspreis. Bei allen anderen steht „+ EK“: antippen und Einkaufspreis eintragen.`
+    : 'Tippe einen Artikel an und trag den Einkaufspreis netto ein. Die Marge erscheint dann sofort in der Liste.';
+  $('#kPending').textContent = pending.length;
+  $('#navCount').textContent = pending.length; $('#navCount').hidden = !pending.length;
+  $('#sideInfo').textContent = S.lastImport ? `${all.length} Artikel · ${fmtDate(S.lastImport.t)}` : 'Foodware CSV · Testbetrieb';
+
+  const units = [...new Set(all.map(x => x.p.unit.trim()).filter(Boolean))].sort();
+  const us = $('#unitFilter'), cur = us.value;
+  us.innerHTML = '<option value="">Alle Einheiten</option>' + units.map(u => `<option ${u === cur ? 'selected' : ''}>${esc(u)}</option>`).join('');
+  us.hidden = units.length < 2;
+
+  renderTable(all); renderChanges(pending); renderData();
+}
+
+function renderTable(all) {
+  const q = state.q.toLowerCase().trim(), words = q.split(/\s+/).filter(Boolean);
+  let rows = all.filter(x => {
+    const f = state.filter;
+    if (f === 'pending' && !x.pending) return false;
+    if (f === 'known' && x.m == null) return false;
+    if (['light', 'dark', 'orange', 'red', 'unknown'].includes(f) && x.c !== f) return false;
+    if (state.unit && x.p.unit.trim() !== state.unit) return false;
+    if (words.length) { const h = (x.p.id + ' ' + fullName(x.p) + ' ' + (x.p.supplier || '')).toLowerCase(); return words.every(w => h.includes(w)); }
+    return true;
+  });
+  const key = { id: x => parseInt(x.p.id) || 0, name: x => fullName(x.p).toLowerCase(), unit: x => x.p.unit, cost: x => x.p.cost ?? Infinity, price: x => x.p.want, margin: x => x.m ?? Infinity, supplier: x => (x.p.supplier || '￿').toLowerCase() }[state.sort];
+  rows.sort((a, b) => { const A = key(a), B = key(b); return (A < B ? -1 : A > B ? 1 : 0) * state.dir || (parseInt(a.p.id) - parseInt(b.p.id)); });
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    const base = th.textContent.replace(/ [↑↓]$/, '');
+    th.innerHTML = esc(base) + (th.dataset.sort === state.sort ? ` <span class="arrow">${state.dir > 0 ? '↑' : '↓'}</span>` : '');
+  });
+  const shown = rows.slice(0, state.limit);
+  $('#items').innerHTML = shown.map(({ p, m, c, pending }) => `
+    <tr data-id="${esc(p.id)}">
+      <td class="c-name"><span class="product">${esc(fullName(p))}</span>${pending ? '<span class="pending">Änderung offen</span>' : ''}${p.missing ? '<span class="pending gone">nicht im Export</span>' : ''}<div class="secondary idunit">#${esc(p.id)} · ${esc(p.unit)}${p.supplier ? ' · ' + esc(p.supplier) : ''}</div></td>
+      <td class="c-id secondary">#${esc(p.id)}</td>
+      <td class="c-unit">${esc(p.unit)}</td>
+      <td class="c-ek money" data-label="EK netto">${p.cost != null ? eur(p.cost) : '<span class="secondary">–</span>'}</td>
+      <td class="c-vk money" data-label="VK brutto">${pending ? `<span class="old">${eur(p.fw)}</span>` : ''}${eur(p.want)}</td>
+      <td class="c-margin" data-label="Marge"><span class="badge ${c}">${m != null ? nf1.format(m) + ' %' : '+ EK'}</span></td>
+      <td class="c-sup secondary">${esc(p.supplier || '–')}</td>
+      <td class="c-act"><button class="edit" tabindex="-1">Bearbeiten ↗</button></td>
+    </tr>`).join('');
+  const empty = $('#empty');
+  if (!all.length) { empty.innerHTML = '<strong>Noch keine Artikel</strong>Importiere deinen Foodware-Artikelexport (CSV), um loszulegen.<br><br><label class="btn primary filebtn">↑ Foodware CSV importieren<input type="file" accept=".csv,.CSV,.txt,text/csv" data-import></label>'; empty.hidden = false; }
+  else if (!rows.length) { empty.innerHTML = '<strong>Nichts gefunden</strong>Keine Artikel für diese Suche oder diesen Filter.'; empty.hidden = false; }
+  else empty.hidden = true;
+  const more = $('#more');
+  more.hidden = rows.length <= state.limit;
+  more.textContent = `Weitere ${Math.min(rows.length - state.limit, 150)} von ${rows.length - state.limit} Artikeln anzeigen`;
+}
+
+function renderChanges(pending) {
+  pending.sort((a, b) => (b.p.changedAt || '').localeCompare(a.p.changedAt || ''));
+  $('#pendingSub').textContent = pending.length ? `${pending.length} Artikel mit neuem Preis` : 'Keine offenen Änderungen. Alles ist in Foodware.';
+  $('#pendingList').innerHTML = pending.map(({ p, m, c }) => `
+    <li><div class="grow"><span class="product">${esc(fullName(p))}</span> <span class="secondary">#${esc(p.id)} · ${esc(p.unit)}</span><div class="secondary">geändert ${fmtDate(p.changedAt)}</div></div>
+    <span class="money"><span class="old">${eur(p.fw)}</span>→ ${eur(p.want)}</span>
+    <span class="badge ${c}">${m != null ? nf1.format(m) + ' %' : '–'}</span>
+    <button class="edit" data-open="${esc(p.id)}">Bearbeiten</button>
+    <button class="edit" style="color:#7a857e" data-revert="${esc(p.id)}">Verwerfen</button></li>`).join('')
+    || '<li class="secondary" style="justify-content:center">✓ Nichts offen</li>';
+
+  const log = S.audit.slice().reverse();
+  $('#auditList').innerHTML = log.slice(0, state.auditLimit).map(auditLine).join('') || '<li class="secondary" style="justify-content:center">Noch keine Einträge</li>';
+  $('#auditMore').hidden = log.length <= state.auditLimit;
+}
+function auditText(a) {
+  if (a.k === 'import') return `Foodware-Export importiert: ${esc(a.file)} (${a.count} Artikel${a.neu ? ', ' + a.neu + ' neu' : ''}${a.ok ? ', ' + a.ok + ' Änderungen bestätigt' : ''})`;
+  if (a.k === 'vk') return `VK ${eur(a.o)} → <b>${eur(a.n)}</b>`;
+  if (a.k === 'ek') return `EK netto ${a.o == null ? '–' : eur(a.o)} → <b>${a.n == null ? '–' : eur(a.n)}</b>${a.s ? ' · ' + esc(a.s) : ''}`;
+  if (a.k === 'revert') return `Änderung verworfen, zurück auf ${eur(a.n)}`;
+  if (a.k === 'ok') return `✓ In Foodware bestätigt: ${eur(a.n)}`;
+  return '';
+}
+function auditLine(a) {
+  const p = a.id && S.products[a.id];
+  return `<li><div class="grow">${p ? `<span class="product">${esc(fullName(p))}</span> <span class="secondary">#${esc(p.id)}</span><br>` : ''}<span>${auditText(a)}</span></div><span class="secondary">${fmtDate(a.t)}</span></li>`;
+}
+
+function renderData() {
+  $('#lastImportInfo').className = 'notice' + (S.lastImport ? ' ok' : '');
+  $('#lastImportInfo').innerHTML = S.lastImport
+    ? `Letzter Import: <b>${esc(S.lastImport.file)}</b> mit ${S.lastImport.count} Artikeln am ${fmtDate(S.lastImport.t)}.`
+    : 'Noch kein Foodware-Export importiert.';
+}
+
+/* ============ Bearbeiten ============ */
+let editId = null;
+const dlg = $('#editDialog');
+function openEdit(id) {
+  const p = S.products[id]; if (!p) return;
+  editId = id;
+  $('#eTitle').textContent = fullName(p);
+  $('#eMeta').textContent = `Art.-Nr. ${p.id} · ${p.unit} · USt ${nf1.format(p.vat).replace(',0', '')} %`;
+  $('#ePrice').value = nf.format(p.want / 100);
+  $('#eCost').value = p.cost != null ? nf.format(p.cost / 100) : '';
+  $('#eSupplier').value = p.supplier || '';
+  $('#eFw').textContent = 'Foodware aktuell: ' + eur(p.fw);
+  $('#eCostHint').textContent = 'je ' + (p.unit || 'Einheit');
+  $('#eRevert').hidden = p.want === p.fw;
+  const hist = S.audit.filter(a => a.id === id).reverse();
+  $('#eHistory').hidden = !hist.length;
+  $('#eHistory ul').innerHTML = hist.slice(0, 30).map(a => `<li>${fmtDate(a.t)} · ${auditText(a)}</li>`).join('');
+  $('#eErr').hidden = true;
+  updatePreview();
+  dlg.showModal();
+  if (matchMedia('(hover:hover)').matches) $('#ePrice').select();
+}
+function updatePreview() {
+  const p = S.products[editId]; if (!p) return;
+  const price = parseCents($('#ePrice').value), cost = parseCents($('#eCost').value);
+  const m = (price && !isNaN(price) && cost != null && !isNaN(cost)) ? marginOf(price, cost, p.vat) : null;
+  const b = $('#eMargin'); b.className = 'badge ' + colorOf(m);
+  b.textContent = m != null ? nf1.format(m) + ' %' : (cost == null ? 'EK fehlt' : '–');
+  const sw = { 50: '#90ee90', 40: '#006400', 30: '#ff9800' };
+  $('#eSuggest').innerHTML = (cost != null && !isNaN(cost) && cost > 0)
+    ? '<span class="secondary" style="align-self:center">VK für Marge:</span>' + [30, 40, 50].map(t => { const v = priceForMargin(cost, p.vat, t); return `<button type="button" data-set="${v}"><span class="sw" style="background:${sw[t]}"></span>${t} % → ${eur(v)}</button>`; }).join('')
+    : '';
+}
+$('#ePrice').addEventListener('input', updatePreview);
+$('#eCost').addEventListener('input', updatePreview);
+$('#eSuggest').addEventListener('click', e => { const b = e.target.closest('[data-set]'); if (b) { $('#ePrice').value = nf.format(b.dataset.set / 100); updatePreview(); } });
+$('#eCancel').addEventListener('click', () => dlg.close());
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+$('#eRevert').addEventListener('click', () => { revert(editId); dlg.close(); });
+$('#editForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const p = S.products[editId]; if (!p) return;
+  const price = parseCents($('#ePrice').value), cost = parseCents($('#eCost').value), sup = $('#eSupplier').value.trim().slice(0, 120);
+  const err = t => { $('#eErr').textContent = t; $('#eErr').hidden = false; };
+  if (price == null || isNaN(price)) return err('Bitte einen gültigen Verkaufspreis eingeben, z. B. 2,99');
+  if (price === 0) return err('Der Verkaufspreis darf nicht 0 sein.');
+  if (cost != null && isNaN(cost)) return err('Bitte einen gültigen Einkaufspreis eingeben oder das Feld leer lassen.');
+  const t = new Date().toISOString(); let changed = false;
+  if (price !== p.want) {
+    S.audit.push({ t, id: p.id, k: 'vk', o: p.want, n: price });
+    p.want = price; p.changedAt = price !== p.fw ? t : null; changed = true;
+  }
+  if (cost !== p.cost || sup !== (p.supplier || '')) {
+    S.audit.push({ t, id: p.id, k: 'ek', o: p.cost, n: cost, s: sup });
+    p.cost = cost; p.supplier = sup; p.costAt = t; changed = true;
+  }
+  if (changed && save()) { render(); toast('Gespeichert'); }
+  dlg.close();
+});
+function revert(id) {
+  const p = S.products[id]; if (!p || p.want === p.fw) return;
+  S.audit.push({ t: new Date().toISOString(), id, k: 'revert', o: p.want, n: p.fw });
+  p.want = p.fw; p.changedAt = null;
+  if (save()) { render(); toast('Änderung verworfen'); }
+}
+
+/* ============ Meldungen ============ */
+const mdlg = $('#msgDialog');
+function msg(title, html, confirm) {
+  $('#mTitle').textContent = title; $('#mBody').innerHTML = html;
+  $('#mCancel').hidden = !confirm; $('#mOk').textContent = confirm || 'OK';
+  mdlg.returnValue = ''; mdlg.showModal();
+  return new Promise(res => mdlg.addEventListener('close', () => res(mdlg.returnValue === 'ok'), { once: true }));
+}
+let toastTimer;
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2400); }
+
+/* ============ Navigation & Events ============ */
+function show(view) {
+  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'view-' + view);
+  document.querySelectorAll('.nav[data-view]').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  try { sessionStorage.setItem('mwm-view', view); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.nav[data-view]').forEach(n => n.addEventListener('click', () => show(n.dataset.view)));
+document.querySelectorAll('.nav[data-soon]').forEach(n => n.addEventListener('click', () => msg('Kommt bald', esc(n.dataset.soon))));
+document.querySelectorAll('[data-quick]').forEach(c => c.addEventListener('click', () => {
+  const v = c.dataset.quick; $('#filter').value = v; state.filter = v; state.limit = 150; render();
+  $('.panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}));
+document.addEventListener('change', e => { if (e.target.matches('[data-import]')) { importFile(e.target.files[0]); e.target.value = ''; } });
+document.addEventListener('click', e => {
+  const ex = e.target.closest('[data-export]'); if (ex) return exportFoodware(ex.dataset.export === 'changed');
+  const op = e.target.closest('[data-open]'); if (op) return openEdit(op.dataset.open);
+  const rv = e.target.closest('[data-revert]'); if (rv) return revert(rv.dataset.revert);
+  const tr = e.target.closest('#items tr'); if (tr) return openEdit(tr.dataset.id);
+  const th = e.target.closest('th[data-sort]');
+  if (th) { if (state.sort === th.dataset.sort) state.dir *= -1; else { state.sort = th.dataset.sort; state.dir = 1; } render(); }
+});
+let searchTimer;
+$('#search').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.q = e.target.value; state.limit = 150; render(); }, 80); });
+$('#filter').addEventListener('change', e => { state.filter = e.target.value; state.limit = 150; render(); });
+$('#unitFilter').addEventListener('change', e => { state.unit = e.target.value; state.limit = 150; render(); });
+$('#more').addEventListener('click', () => { state.limit += 150; render(); });
+$('#auditMore').addEventListener('click', () => { state.auditLimit += 100; render(); });
+
+$('#backupBtn').addEventListener('click', () => {
+  download(`smart-pricing-backup_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ app: 'mwm-smart-pricing', version: 1, savedAt: new Date().toISOString(), data: S }, null, 1), 'application/json');
+});
+$('#restoreInput').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  let data;
+  try { const j = JSON.parse(await f.text()); if (j.app !== 'mwm-smart-pricing' || !j.data || typeof j.data.products !== 'object') throw 0; data = j.data; }
+  catch (_) { return msg('Kein gültiges Backup', 'Diese Datei ist kein Smart-Pricing-Backup.'); }
+  const n = Object.keys(data.products).length;
+  if (!await msg('Backup laden?', `Das Backup enthält <b>${n}</b> Artikel. Alle aktuellen Daten auf diesem Gerät werden ersetzt.`, 'Backup laden')) return;
+  S = Object.assign({ products: {}, audit: [], lastImport: null }, data);
+  if (save()) { render(); toast('Backup geladen'); }
+});
+$('#wipeBtn').addEventListener('click', async () => {
+  if (!await msg('Alle Daten löschen?', 'Artikel, Einkaufspreise, offene Änderungen und Verlauf werden aus diesem Browser entfernt. Das kann nicht rückgängig gemacht werden.', 'Endgültig löschen')) return;
+  S = { products: {}, audit: [], lastImport: null };
+  if (save()) { render(); toast('Alle Daten gelöscht'); }
+});
+window.addEventListener('storage', e => { if (e.key === KEY) { load(); render(); } });
+
+/* ============ Start ============ */
+load();
+render();
+try { const v = sessionStorage.getItem('mwm-view'); if (v && $('#view-' + v)) show(v); } catch (e) {}
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
