@@ -324,7 +324,7 @@ dialog.wide{width:min(1120px,calc(100% - 24px))}
         <div id="dropText"><b style="color:var(--ink)">Rechnung hier ablegen</b> oder auswählen</div>
         <div class="actions">
           <label class="btn primary filebtn">↑ PDF-Rechnung wählen<input type="file" accept="application/pdf,.pdf" data-invoice></label>
-          <label class="btn filebtn" id="photoBtn" hidden>↑ Foto der Rechnung<input type="file" accept="image/*" data-invoice></label>
+          <label class="btn filebtn" id="photoBtn" hidden>↑ Fotos der Rechnung<input type="file" accept="image/*" multiple data-invoice></label>
         </div>
         <div class="secondary" id="photoNote" style="margin-top:12px">Fotos von Papierrechnungen kann nur die KI lesen. Die gibt es in der Version unter deinem claude.ai-Link.</div>
       </div>
@@ -898,6 +898,17 @@ function bestMatch(desc, invUnit) {
   }
   return best && best.score >= 0.42 ? best : null;
 }
+const CASE = /^(kiste|kisten|kst|ki|kolli|ko|colli|krt|karton|steige|stg|sack|pack|packung|tray|gebinde|ve)$/;
+function packFor(it, p) {
+  const pu = norm(it.unit), au = norm(p.unit), pk = norm(it.packUnit);
+  if (CASE.test(pu)) {
+    if (it.pack > 0 && (pk === 'kg' ? au === 'kg' : au !== 'kg')) return it.pack;
+    return guessPack(it.desc, it.unit, p.unit);
+  }
+  if (pu === 'kg' && au === 'kg') return 1;
+  if (pu && pu !== 'kg' && au !== 'kg') return 1;
+  return guessPack(it.desc, it.unit, p.unit);
+}
 function guessPack(desc, invUnit, artUnit) {
   const d = String(desc), au = norm(artUnit), iu = norm(invUnit);
   if (au === 'kg' && iu === 'kg') return 1;
@@ -923,21 +934,31 @@ function updateInvoiceMode() {
   $('#photoBtn').hidden = !aiImages;
   $('#photoNote').hidden = !!aiImages;
 }
-const AI_PROMPT = `Du liest eine Lieferanten-Rechnung (Obst- und Gemüse-Großhandel) für einen Marktstand.
+const AI_PROMPT = `Du liest eine Lieferanten-Rechnung aus dem Obst- und Gemüse-Großhandel (Großmarkt München) für einen Marktstand. Oft ist es ein schräges Handyfoto oder ein Screenshot; ignoriere alles außerhalb der Rechnung.
 Antworte NUR mit JSON in genau dieser Form:
-{"supplier":"Name des Lieferanten","date":"TT.MM.JJJJ","prices_gross":false,"items":[{"description":"Artikelbezeichnung wie auf der Rechnung","quantity":3,"unit":"Kiste","unit_price":18.00,"pack_size":12,"pack_unit":"Stck"}]}
-Regeln:
-- unit_price ist der Einzelpreis je Rechnungseinheit (je Kiste, je kg, je Bund ...), als Zahl mit Punkt, nicht der Zeilengesamtbetrag.
-- pack_size ist der Inhalt je Rechnungseinheit, wenn er erkennbar ist (Kiste mit 12 Stück: 12 und "Stck"; Kiste mit 5 kg: 5 und "kg"). Sonst null.
-- prices_gross ist nur dann true, wenn die Einzelpreise die Mehrwertsteuer enthalten.
-- Lass Summen, Steuer-, Pfand-, Leergut-, Fracht- und Rabattzeilen weg.
-- Erfinde nichts. Unlesbare Werte sind null.`;
+{"supplier":"Name des Lieferanten","date":"TT.MM.JJJJ","prices_gross":false,"items":[{"description":"Bezeichnung wie auf der Rechnung","quantity":27,"price_unit":"kg","unit_price":3.00,"line_total":81.00,"pack_size":null,"pack_unit":null}]}
+Felder je Position:
+- unit_price: genau der Einzelpreis aus der Spalte Einzelpreis / Preis/Einheit / Preis, als Zahl mit Punkt. Nie den Zeilenbetrag.
+- price_unit: worauf sich unit_price bezieht: "kg", "Stück", "Bund", "Schale" oder "Kiste" (Kiste auch für Kolli, Karton, Steige, Colli, Sack).
+- quantity: die Menge, mit der unit_price multipliziert den Zeilenbetrag ergibt.
+- line_total: der Zeilenbetrag (Warenwert / Gesamt / Betrag).
+- pack_size und pack_unit: NUR wenn price_unit "Kiste" ist und der Inhalt der Kiste erkennbar ist, z. B. "Passionsfrucht 3kg" -> 3 und "kg", "Erdbeeren 8x500g" je Kiste -> 8 und "Schale", Kiste mit 40 Stück -> 40 und "Stück". Sonst null.
+Typische Formate:
+- Spalten "Colli/Sack | Gewicht/Menge | Preis/Einheit | Warenwert": der Preis gilt je Einheit aus Gewicht/Menge. "3 Colli, 27 kg, 3,00, 81,00" -> quantity 27, price_unit "kg". "1 Colli, 1 Kolli, 38,00" -> quantity 1, price_unit "Kiste".
+- Spalten "Anzahl | Inhalt/Stück Bund/kg | Ges.-Menge | Einzelpreis | Gesamt": der Einzelpreis gilt je Stück/Bund/kg/Schale. "6 | 15,00 | 90,00 | 0,44 | 39,60" bei Radieserl -> quantity 90, price_unit "Bund", unit_price 0.44. "54 | 8,00 | 432,00 | 2,95" bei "Erdbeeren 8x500g" -> quantity 432, price_unit "Schale". "11 | 12,00 | 132,00 | 0,58" bei Kohlrabi -> quantity 132, price_unit "Stück". Steht bei Inhalt 1,00, gilt der Einzelpreis je Kiste: "3 | 1,00 | 3,00 | 11,95" bei Blumenkohl -> quantity 3, price_unit "Kiste", pack_size null.
+- Spalten "Menge | Warenbezeichnung | Stk./kg | Preis | Betrag": der Preis gilt je Kiste. "40 Clementinen 28,00 1.120,00" -> quantity 40, price_unit "Kiste". "5 Passionsfrucht 3kg 38,00 190,00" -> price_unit "Kiste", pack_size 3, pack_unit "kg".
+Weiter:
+- prices_gross ist nur dann true, wenn die Einzelpreise die Mehrwertsteuer enthalten. Bei Großmarkt-Rechnungen sind sie fast immer netto.
+- Lass Summen, Überträge, Steuer-, Pfand-, Leergut- (z. B. EUROPOOL), Fracht- und Rabattzeilen (z. B. Entsorgungsrabatt) weg.
+- Mehrere Bilder sind Seiten derselben Rechnung oder mehrere Rechnungen desselben Lieferanten: alle Positionen aufführen.
+- Erfinde nichts. Unlesbare Zahlen sind null.`;
 async function aiExtract(text, images) {
-  const input = text ? AI_PROMPT + '\n\nText der Rechnung:\n' + text.slice(0, 80000) : AI_PROMPT + '\n\nDie Rechnung ist als Bild angehängt.';
+  const input = text ? AI_PROMPT + '\n\nText der Rechnung:\n' + text.slice(0, 80000) : AI_PROMPT + '\n\nDie Rechnung ist als Bild angehängt' + (images.length > 1 ? ` (${images.length} Bilder).` : '.');
   const r = await ai.json(input, images && images.length ? { images } : {});
   if (!r || !Array.isArray(r.items)) throw { code: 'invalid_json' };
   const items = r.items.filter(it => it && it.description && it.unit_price != null).map(it => ({
-    desc: String(it.description), qty: it.quantity ?? null, unit: it.unit || '', price: Math.round(Number(String(it.unit_price).replace(',', '.')) * 100),
+    desc: String(it.description), qty: it.quantity ?? null, unit: it.price_unit || it.unit || '', price: Math.round(Number(String(it.unit_price).replace(',', '.')) * 100),
+    total: it.line_total != null ? Math.round(Number(String(it.line_total).replace(',', '.')) * 100) : null,
     pack: it.pack_size ? Number(it.pack_size) : null, packUnit: it.pack_unit || '', extra: NOPRICE.test(it.description)
   })).filter(it => it.price > 0);
   return { items, supplier: r.supplier || '', date: r.date || '', gross: !!r.prices_gross };
@@ -946,7 +967,10 @@ async function aiExtract(text, images) {
 /* Ablauf */
 let inv = null;
 function busy(html) { const b = $('#invBusy'); b.hidden = !html; b.innerHTML = html || ''; }
-async function handleInvoice(file) {
+async function handleInvoice(files) {
+  files = (files || []).filter(Boolean);
+  const imgs = files.filter(f => /^image\//.test(f.type));
+  const file = imgs.length > 1 ? imgs[0] : files[0];
   if (!file) return;
   if (!Object.keys(S.products).length) return msg('Erst Artikel importieren', 'Damit die App Rechnungspositionen deinen Artikeln zuordnen kann, importiere zuerst deinen Foodware-Export unter <b>Artikel</b>.');
   const isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name), isImg = /^image\//.test(file.type);
@@ -971,7 +995,9 @@ async function handleInvoice(file) {
       }
     } else {
       busy('<span class="spin"></span>Die KI liest das Foto. Das dauert meist 20–60 Sekunden …');
-      res = await aiExtract('', [await shrinkImage(file)]);
+      const max = (aiImages && aiImages.maxPerCall) || (aiImages && aiImages.maxCount) || 5;
+      const list = imgs.slice(0, max);
+      res = await aiExtract('', await Promise.all(list.map(f => shrinkImage(f))));
     }
   } catch (e) {
     busy('');
@@ -984,15 +1010,16 @@ async function handleInvoice(file) {
   }
   busy('');
   if (!res.items.length) return msg('Keine Positionen gefunden', 'In der Rechnung wurden keine Zeilen mit Artikel und Preis erkannt. Du kannst die Einkaufspreise weiter von Hand bei den Artikeln eintragen.');
-  openInvoice(file.name, res);
+  openInvoice(imgs.length > 1 ? `${imgs.length} Fotos` : file.name, res);
 }
 function openInvoice(fileName, res) {
   buildArtIndex();
   const knownSup = Object.values(S.maps).find(m => m.supplier && norm(res.supplier).includes(norm(m.supplier)));
   inv = { file: fileName, rows: res.items.map(it => {
     const m = bestMatch(it.desc, it.unit), p = m && S.products[m.id];
-    let pack = m && m.remembered ? m.pack : it.pack && p && (!it.packUnit || norm(it.packUnit) === norm(p.unit) || (norm(p.unit) !== 'kg' && norm(it.packUnit) !== 'kg')) ? it.pack : p ? guessPack(it.desc, it.unit, p.unit) : 1;
-    return { desc: it.desc, qty: it.qty, unit: it.unit, price: it.price, pack, id: p ? p.id : '', use: !!p && !it.extra, remembered: !!(m && m.remembered) };
+    const pack = m && m.remembered ? m.pack : p ? packFor(it, p) : 1;
+    const off = it.total && it.qty && it.price ? Math.abs(it.qty * it.price - it.total) > Math.max(3, it.total * 0.02) : false;
+    return { desc: it.desc, qty: it.qty, unit: it.unit, price: it.price, total: it.total || null, off, packUnit: it.packUnit, pack, id: p ? p.id : '', use: !!p && !it.extra, remembered: !!(m && m.remembered) };
   }) };
   $('#invMeta').textContent = `${fileName} · ${inv.rows.length} Positionen erkannt · ${inv.rows.filter(r => r.id).length} davon einem Artikel zugeordnet`;
   $('#invSupplier').value = knownSup ? knownSup.supplier : res.supplier || '';
@@ -1003,7 +1030,7 @@ function openInvoice(fileName, res) {
   $('#invRows').innerHTML = inv.rows.map((r, i) => `
     <div class="invrow" data-i="${i}">
       <label class="chk"><input type="checkbox" class="iu" ${r.use ? 'checked' : ''} aria-label="Übernehmen"></label>
-      <div class="idesc"><b>${esc(r.desc)}</b><div class="secondary">${r.qty != null ? esc(String(r.qty).replace('.', ',')) + ' ' : ''}${esc(r.unit || '')}${r.remembered ? ' · Zuordnung gemerkt' : ''}</div></div>
+      <div class="idesc"><b>${esc(r.desc)}</b><div class="secondary">${r.qty != null ? esc(String(r.qty).replace('.', ',')) + ' ' : ''}${esc(r.unit || '')}${r.price ? ' × ' + eur(r.price) + (r.unit ? ' je ' + esc(r.unit) : '') : ''}${r.total ? ' = ' + eur(r.total) : ''}${r.remembered ? ' · Zuordnung gemerkt' : ''}</div>${r.off ? '<div class="none" style="font-size:12px">Menge × Preis passt nicht zum Zeilenbetrag. Bitte mit der Rechnung vergleichen.</div>' : ''}</div>
       <label class="f fp">Preis €<input class="ip" inputmode="decimal" value="${nf.format(r.price / 100)}"></label>
       <label class="f fk">÷ Inhalt<input class="ik" inputmode="decimal" value="${String(r.pack).replace('.', ',')}"></label>
       <label class="f art">Foodware-Artikel<input class="ia" list="artList" autocomplete="off" placeholder="Artikel suchen …" value="${r.id ? esc(r.id + ' · ' + fullName(S.products[r.id])) : ''}"></label>
@@ -1028,7 +1055,7 @@ function updateInvRow(i) {
   else {
     const c = rowCost(r), m = c != null ? marginOf(p.want, c, p.vat) : null;
     out.innerHTML = c == null ? '<span class="none">Preis oder Inhalt fehlt</span>'
-      : `<span class="money">${eur(c)} / ${esc(p.unit.trim())}</span> <span class="badge ${colorOf(m)}">${m != null ? nf1.format(m) + ' %' : '–'}</span><div class="secondary">VK ${eur(p.want)} · EK bisher ${p.cost != null ? eur(p.cost) : '–'}</div>${c >= p.want ? '<div class="none">Bitte prüfen: Einkauf teurer als Verkauf. Stimmen Artikel und Inhalt?</div>' : ''}`;
+      : `<span class="money">${eur(c)} / ${esc(p.unit.trim())}</span> <span class="badge ${colorOf(m)}">${m != null ? nf1.format(m) + ' %' : '–'}</span><div class="secondary">VK ${eur(p.want)} · EK bisher ${p.cost != null ? eur(p.cost) : '–'}</div>${CASE.test(norm(r.unit)) && String(r.pack) === '1' ? `<div class="none">Preis gilt je Kiste: bei Inhalt eintragen, wie viel ${norm(p.unit) === 'kg' ? 'kg' : 'Stück'} drin sind.</div>` : c >= p.want ? '<div class="none">Bitte prüfen: Einkauf teurer als Verkauf. Stimmen Artikel und Inhalt?</div>' : ''}`;
   }
   const n = inv.rows.filter(x => x.use && S.products[x.id] && rowCost(x) != null).length;
   $('#invCount').textContent = `${n} von ${inv.rows.length} Positionen werden übernommen`;
@@ -1076,11 +1103,11 @@ function renderInvoices() {
   $('#invList').innerHTML = list.slice(0, 50).map(v => `<li><div class="grow"><span class="product">${esc(v.supplier || 'Unbekannter Lieferant')}</span>${v.date ? ` <span class="secondary">Rechnung vom ${esc(v.date)}</span>` : ''}<div class="secondary">${esc(v.file)}</div></div><span>${v.count} Einkaufspreise</span><span class="secondary">${fmtDate(v.t)}</span></li>`).join('')
     || '<li class="secondary" style="justify-content:center">Noch keine Rechnung übernommen</li>';
 }
-document.addEventListener('change', e => { if (e.target.matches('[data-invoice]')) { handleInvoice(e.target.files[0]); e.target.value = ''; } });
+document.addEventListener('change', e => { if (e.target.matches('[data-invoice]')) { handleInvoice([...e.target.files]); e.target.value = ''; } });
 const dz = $('#dropzone');
 ['dragenter', 'dragover'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('over'); }));
-dz.addEventListener('drop', e => handleInvoice(e.dataTransfer.files[0]));
+dz.addEventListener('drop', e => handleInvoice([...e.dataTransfer.files]));
 
 /* ============ Navigation & Events ============ */
 function show(view) {
